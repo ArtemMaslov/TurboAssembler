@@ -1,0 +1,674 @@
+Turbo Assembler	 Version 4.1	    02/17/22 20:01:07	    Page 1
+frame.asm
+
+
+
+      1	0000			     .model tiny
+      2	0000			     .code
+      3
+      4				     org 100h
+      5
+      6				     locals __
+      7
+      8				     ;--------------------------------------------------------------------
+      9				     ;--------------------------------------------------------------------
+     10
+     11	      =0010		     x0					 = 16d	     ; Frame left top corner x
+     12	      =000A		     y0					 = 10d	     ; Frame left top corner y
+     13
+     14	      =0010		     Width			 = 16d	     ; Frame width with	borders
+*Warning* frame.asm(14)	Reserved word used as symbol: WIDTH
+     15	      =0006		     Height			 = 6d	     ; Frame height with borders
+     16
+     17	      =0050		     ScreenWidth	 = 80d
+     18	      =0019		     ScreenHeight	 = 25d
+     19
+     20	      =00CD		     SymHorLine			     = 0CDh
+     21	      =00BA		     SymVerLine			     = 0BAh
+     22	      =00C9		     SymTopLeftCorner	     = 0C9h
+     23	      =00BB		     SymTopRightCorner	     = 0BBh
+     24	      =00C8		     SymBotLeftCorner	     = 0C8h
+     25	      =00BC		     SymBotRightCorner	     = 0BCh
+     26	      =0020		     SymSpace			     = ' '
+     27
+     28	      =003F		     AttrBackground	 = 03Fh	; 0111 0000
+     29	      =008F		     AttrShadow			     = 08Fh ; 1000 1111
+     30	      =007B		     AttrFrame			     = 07Bh ; 1011 1011
+     31
+     32	      =B800		     VideoSeg			     = 0B800h
+     33
+     34				     ;--------------------------------------------------------------------
+     35				     ;--------------------------------------------------------------------
+     36				     .getch  macro
+     37						     nop
+     38						     xor ah, ah
+     39						     int 16h
+     40						     nop
+     41						     endm
+     42				     ;--------------------------------------------------------------------
+     43				     ;--------------------------------------------------------------------
+     44
+     45
+     46				     ;--------------------------------------------------------------------
+     47				     ; Main
+     48				     ; CmdLine:
+     49				     ;	     type <border-style> <message> <header>
+     50				     ; CmdArgs:
+     51				     ;
+     52				     ;	     type:
+     53				     ;		     0 - custom	style. border style must be entered.
+     54				     ;		     1 - one bordered frame
+     55				     ;		     2 - two bordered frame
+     56				     ;		     3 - arithmetic frame.
+Turbo Assembler	 Version 4.1	    02/17/22 20:01:07	    Page 2
+frame.asm
+
+
+
+     57				     ;
+     58				     ;	     border-style (optional):
+     59				     ;		     can be entered if type equal 0.
+     60				     ;		     format:
+     61				     ;			     abc123ABC
+     62				     ;		     resulted frame:
+     63				     ;			     abbbbbbbbbc
+     64				     ;			     12222222221
+     65				     ;			     12222222221
+     66				     ;			     12222222221
+     67				     ;			     12222222221
+     68				     ;			     ABBBBBBBBBC
+     69				     ;
+     70				     ;	     message:
+     71				     ;		     some string $-terminated.
+     72				     ;
+     73				     ;	     header:
+     74				     ;		     some string $-terminated.
+     75				     ;
+     76				     ; ExitCodes:
+     77				     ;	     0 - no errors
+     78				     ;	     1 - incorrect type	(input)
+     79				     ;	     2 - incorrect border style	(input)
+     80				     ;	     3 - incorrect string input
+     81				     ;--------------------------------------------------------------------
+     82	0100			     Start:
+     83
+     84	0100  E8 002D				     call ParseCmd
+     85	0103  E8 00D7				     call DrawFrame
+     86
+     87						     .getch
+1    88	0106  90				     nop
+1    89	0107  32 E4				     xor ah, ah
+1    90	0109  CD 16				     int 16h
+1    91	010B  90				     nop
+     92
+     93	010C  B8 4C00				     mov ax, 4c00h			     ; exit(0);
+     94	010F  CD 21				     int 21h
+     95
+     96				     ;--------------------------------------------------------------------
+     97				     ; Parse args from command line
+     98				     ;
+     99				     ; Entry: null
+    100				     ;
+    101				     ; Destr: bx, dl, ax
+    102				     ;--------------------------------------------------------------------
+    103	0111			     PrintCmd	     proc
+    104
+    105	0111  BB 0000				     mov bx, 00h
+    106
+    107	0114			     __loop:
+    108	0114  B4 02				     mov ah, 02h
+    109	0116  8A 97 0080			     mov dl, byte ptr [bx + 080h]
+    110
+    111						     ; if (dl == '\r') return;
+    112	011A  80 FA 0D				     cmp dl, 0dh
+    113	011D  75 01				     jne __endif
+Turbo Assembler	 Version 4.1	    02/17/22 20:01:07	    Page 3
+frame.asm
+
+
+
+    114	011F  C3				     ret
+    115	0120			     __endif:
+    116						     ; putc();
+    117	0120  CD 21				     int 21h
+    118
+    119	0122  43				     inc bx
+    120
+    121	0123  81 FB 0080			     cmp bx, 80h
+    122	0127  76 EB				     jbe __loop
+    123
+    124						     .getch
+1   125	0129  90				     nop
+1   126	012A  32 E4				     xor ah, ah
+1   127	012C  CD 16				     int 16h
+1   128	012E  90				     nop
+    129
+    130	012F  C3				     ret
+    131	0130			     PrintCmd	     endp
+    132
+    133				     ;--------------------------------------------------------------------
+    134				     ; Parse args from command line
+    135				     ;
+    136				     ; Entry: null
+    137				     ;
+    138				     ; Destr: si, bx, cx, ax, dx
+    139				     ;--------------------------------------------------------------------
+    140	0130			     ParseCmd	     proc
+    141
+    142	0130  BB 0082				     mov bx, 82h ; Cmd first char
+    143
+    144	0133  E8 0031				     call ParseFrameType
+    145
+    146	0136  E8 000E				     call ParseString
+    147
+    148	0139  83 F9 00				     cmp cx, 00h
+    149	013C  74 08				     je	__exit
+    150
+    151	013E  89 16 0275r			     mov word ptr [offset PtrMessage], dx
+    152	0142  89 0E 0277r			     mov word ptr [offset LenMessage], cx
+    153						     ; Incorrect string
+    154						     ; puts();
+    155						     ; mov ah, 40h
+    156						     ; mov bx, 0002h			     ; stderr
+    157						     ; mov cx, Error_String_Len
+    158						     ; mov dx, offset Error_String
+    159						     ; int 21h
+    160						     ;
+    161						     ; mov ax, 4c03h			     ; exit(3);
+    162						     ; int 21h
+    163	0146			     __exit:
+    164	0146  C3				     ret
+    165	0147			     ParseCmd	     endp
+    166
+    167				     ;--------------------------------------------------------------------
+    168				     ; Parse  $-terminated string.
+    169				     ;
+    170				     ; Entry: bx - ptr to cmd str
+Turbo Assembler	 Version 4.1	    02/17/22 20:01:07	    Page 4
+frame.asm
+
+
+
+    171				     ;
+    172				     ; Error: cx = 0 string wasn't found
+    173				     ;
+    174				     ; Out:   dx = address of string start
+    175				     ;		      cx = string length
+    176				     ;
+    177				     ; Destr: bx, dx, cx
+    178				     ;--------------------------------------------------------------------
+    179	0147			     ParseString	     proc
+    180
+    181	0147  8B D3				     mov dx, bx
+    182	0149  B9 0000				     mov cx, 00h
+    183
+    184	014C  4B				     dec bx
+    185	014D			     __loop:
+    186	014D  43				     inc bx
+    187	014E  41				     inc cx
+    188
+    189	014F  81 3F 2424			     cmp word ptr [bx],	2424h ;	[bx] ==	"$$"?
+    190	0153  74 0E				     je	__exit
+    191
+    192	0155  80 3F 0D				     cmp byte ptr [bx],	0Dh   ;	[bx] ==	'\r'?
+    193	0158  74 09				     je	__exit
+    194
+    195	015A  81 FB 0100			     cmp bx, 100h
+    196	015E  72 ED				     jb	__loop
+    197
+    198	0160			     __incorrect_string:
+    199	0160  B9 0000				     mov cx, 00h
+    200	0163			     __exit:
+    201	0163  83 E9 02				     sub cx, 02h
+    202	0166  C3				     ret
+    203	0167			     ParseString	     endp
+    204
+    205				     ;--------------------------------------------------------------------
+    206				     ; Parses frame type
+    207				     ;
+    208				     ; Entry: bx - ptr to cmd str
+    209				     ;
+    210				     ; Out:   PtrBorderStyleArg	= style	format string
+    211				     ;
+    212				     ; Error: 1	- incorrect type
+    213				     ;
+    214				     ; Destr: si, bx, cx, ax, dx
+    215				     ;--------------------------------------------------------------------
+    216	0167			     ParseFrameType  proc
+    217
+    218	0167  8A 17				     mov dl, byte ptr [bx]
+    219
+    220						     ; after type must be space	or '\r'	if arg is the last
+    221
+    222						     ; char c =	[bx + 01h]
+    223						     ; if (c !=	'\r' &&	c != ' ') return error;
+    224	0169  80 7F 01 0D			     cmp byte ptr [bx +	01h], 0Dh
+    225	016D  74 06				     je	__switch
+    226	016F  80 7F 01 20			     cmp byte ptr [bx +	01h], 20h    ; space
+    227	0173  75 17				     jne __incorrect_type
+Turbo Assembler	 Version 4.1	    02/17/22 20:01:07	    Page 5
+frame.asm
+
+
+
+    228
+    229	0175			     __switch:
+    230	0175  83 C3 02				     add bx, 2
+    231
+    232	0178  80 FA 30				     cmp dl, 30h
+    233	017B  74 22				     je	__custom
+    234
+    235	017D  80 FA 31				     cmp dl, 31h
+    236	0180  74 21				     je	__one_border
+    237
+    238	0182  80 FA 32				     cmp dl, 32h
+    239	0185  74 11				     je	__two_borders
+    240
+    241	0187  80 FA 33				     cmp dl, 33h
+    242	018A  74 1E				     je	__arithmetic_borders
+    243
+    244						     ; Incorrect type
+    245
+    246	018C			     __incorrect_type:
+    247	018C  B4 09				     mov ah, 09h
+    248	018E  BA 028Ar				     mov dx, offset Error_Type
+    249	0191  CD 21				     int 21h
+    250
+    251	0193  B8 4C01				     mov ax, 4c01h			     ; exit(1);
+    252	0196  CD 21				     int 21h
+    253
+    254	0198			     __two_borders:
+    255	0198  C7 06 0273r 0261r			     mov word ptr [offset PtrBorderStyleArg], offset TwoBordFrameStyle
+    256
+    257	019E  C3				     ret
+    258	019F			     __custom:
+    259	019F  E8 000F				     call ParseBorderStyle
+    260
+    261	01A2  C3				     ret
+    262	01A3			     __one_border:
+    263	01A3  C7 06 0273r 0258r			     mov word ptr [offset PtrBorderStyleArg], offset OneBordFrameStyle
+    264
+    265	01A9  C3				     ret
+    266	01AA			     __arithmetic_borders:
+    267	01AA  C7 06 0273r 026Ar			     mov word ptr [offset PtrBorderStyleArg], offset ArithFrameStyle
+    268
+    269	01B0  C3				     ret
+    270
+    271	01B1			     ParseFrameType  endp
+    272
+    273				     ;--------------------------------------------------------------------
+    274				     ; Parses border style
+    275				     ;
+    276				     ; Entry: dl - style index
+    277				     ;		      bx - ptr to cmd str
+    278				     ;
+    279				     ; Out:   PtrBorderStyleArg	= style	format string
+    280				     ;
+    281				     ; Error: 2	- incorrect border style
+    282				     ;
+    283				     ; Destr: si, bx, cx, ax, dx
+    284				     ;--------------------------------------------------------------------
+Turbo Assembler	 Version 4.1	    02/17/22 20:01:07	    Page 6
+frame.asm
+
+
+
+    285	01B1			     ParseBorderStyle	     proc
+    286
+    287	01B1  89 1E 0273r			     mov word ptr [offset PtrBorderStyleArg], bx
+    288
+    289	01B5  B9 0000				     mov cx, 00h
+    290	01B8			     __loop:
+    291	01B8  8A 07				     mov al, byte ptr [bx]
+    292
+    293						     ; if (ax != number) return	error;
+    294						     ; cmp al, 30h
+    295						     ; jb  __incorrect_border_style
+    296						     ; cmp al, 39h
+    297						     ; jbe __next
+    298
+    299	01BA  3C 0D				     cmp al, 0Dh
+    300	01BC  75 0C				     jne __next
+    301
+    302						     ; Incorrect border	style
+    303	01BE			     __incorrect_border_style:
+    304	01BE  B4 09				     mov ah, 09h
+    305	01C0  BA 02B2r				     mov dx, offset Error_BorderStyle
+    306	01C3  CD 21				     int 21h
+    307
+    308	01C5  B8 4C02				     mov ax, 4c02h			     ; exit(2);
+    309	01C8  CD 21				     int 21h
+    310
+    311	01CA			     __next:
+    312
+    313	01CA  43				     inc bx
+    314	01CB  41				     inc cx
+    315
+    316	01CC  83 F9 09				     cmp cx, 09h
+    317	01CF  72 E7				     jb	__loop
+    318
+    319						     ; after type must be space	or '\r'	if arg is the last
+    320
+    321						     ; char c =	[bx + 01h]
+    322						     ; if (c !=	'\r' &&	c != ' ') return error;
+    323	01D1  80 3F 0D				     cmp byte ptr [bx],	0Dh
+    324	01D4  74 05				     je	__exit
+    325	01D6  80 3F 20				     cmp byte ptr [bx],	20h  ; space
+    326	01D9  75 E3				     jne __incorrect_border_style
+    327
+    328	01DB			     __exit:
+    329	01DB  43				     inc bx
+    330	01DC  C3				     ret
+    331	01DD			     ParseBorderStyle	     endp
+    332
+    333				     ;--------------------------------------------------------------------
+    334				     ; Draws frame
+    335				     ;
+    336				     ; Entry: PtrBorderStyleArg	- address of style string
+    337				     ;
+    338				     ; Destr: ax, cx, bx, dx, di, si
+    339				     ;--------------------------------------------------------------------
+    340	01DD			     DrawFrame	     proc
+    341
+Turbo Assembler	 Version 4.1	    02/17/22 20:01:07	    Page 7
+frame.asm
+
+
+
+    342						     ; Init Frame
+    343	01DD  B8 B800				     mov ax, VideoSeg
+    344	01E0  8E C0				     mov es, ax
+    345
+    346	01E2  BA 0660				     mov dx, y0	* ScreenWidth *	02h + x0 * 02h
+    347	01E5  B4 3F				     mov ah, AttrBackground
+    348
+    349						     ; Draw top	line
+    350	01E7  8B FA				     mov di, dx
+    351	01E9  B9 000C				     mov cx, 12d
+    352	01EC  8B 36 0273r			     mov si, word ptr [offset PtrBorderStyleArg]
+    353
+    354	01F0  E8 0047				     call DrawFrameRow
+    355
+    356						     ; Draw center part
+    357	01F3  BB 0004				     mov bx, Height - 02h
+    358	01F6  83 C6 03				     add si, 03h
+    359
+    360	01F9			     __loop:
+    361	01F9  81 C2 00A0			     add dx, 02h * ScreenWidth
+    362	01FD  8B FA				     mov di, dx
+    363	01FF  B9 000C				     mov cx, 12d
+    364
+    365	0202  E8 0035				     call DrawFrameRow
+    366
+    367	0205  4B				     dec bx
+    368
+    369	0206  77 F1				     ja	__loop
+    370
+    371						     ; Draw bottom line
+    372	0208  81 C2 00A0			     add dx, 02h * ScreenWidth
+    373	020C  83 C6 03				     add si, 03h
+    374	020F  8B FA				     mov di, dx
+    375	0211  B9 000C				     mov cx, 12d
+    376
+    377	0214  E8 0023				     call DrawFrameRow
+    378
+    379						     ; DrawText
+    380
+    381	0217  83 3E 0275r 00			     cmp word ptr [offset PtrMessage], 00h
+    382	021C  74 0E				     je	__exit
+    383
+    384	021E  8B 36 0275r			     mov si, word ptr [offset PtrMessage]
+    385	0222  BF 0702				     mov di, 02h * (x0 + 01h) +	02h * (y0 + 01h) * ScreenWidth
+    386	0225  8B 0E 0277r			     mov cx, word ptr [offset LenMessage]
+    387
+    388	0229  E8 0001				     call DrawText
+    389
+    390	022C			     __exit:
+    391	022C  C3				     ret
+    392	022D			     DrawFrame	     endp
+    393
+    394				     ;--------------------------------------------------------------------
+    395				     ; Draws text
+    396				     ;
+    397				     ; Entry:
+    398				     ;		      ah = sym attr
+Turbo Assembler	 Version 4.1	    02/17/22 20:01:07	    Page 8
+frame.asm
+
+
+
+    399				     ;		      cx = string length
+    400				     ;		      di = address of start line in video seg
+    401				     ;		      si = address of string of	chars to be printed
+    402				     ;		      es = video segment
+    403				     ;
+    404				     ; Destr: al, cx, si, di
+    405				     ;--------------------------------------------------------------------
+    406	022D			     DrawText	     proc
+    407
+    408	022D			     __loop:
+    409	022D  8A 04				     mov al, byte ptr [si]
+    410	022F  26: 89 05				     mov es:[di], ax
+    411
+    412	0232  46				     inc si
+    413	0233  83 C7 02				     add di, 02h
+    414	0236  49				     dec cx
+    415
+    416	0237  77 F4				     ja	__loop
+    417
+    418	0239  C3				     ret
+    419	023A			     DrawText	     endp
+    420
+    421				     ;--------------------------------------------------------------------
+    422				     ; Draws horizontal	line
+    423				     ;
+    424				     ; Entry:
+    425				     ;		      ah = sym attr
+    426				     ;		      cx = length of line
+    427				     ;		      di = address of start line in video seg
+    428				     ;		      si = address of string of	chars to be printed
+    429				     ;		      es = video segment
+    430				     ;
+    431				     ; Destr: al, cx, di, not si,
+    432				     ;--------------------------------------------------------------------
+    433	023A			     DrawFrameRow    proc
+    434
+    435	023A  8A 04				     mov al, byte ptr [si]
+    436	023C  26: 89 05				     mov es:[di], ax
+    437
+    438	023F  83 C7 02				     add di, 02h
+    439	0242  46				     inc si
+    440
+    441	0243  8A 04				     mov al, byte ptr [si]
+    442
+    443	0245			     __loop:
+    444	0245  26: 89 05				     mov es:[di], ax
+    445	0248  83 C7 02				     add di, 02h
+    446	024B  49				     dec cx
+    447
+    448	024C  77 F7				     ja	__loop
+    449
+    450	024E  46				     inc si
+    451	024F  8A 04				     mov al, byte ptr [si]
+    452	0251  26: 89 05				     mov es:[di], ax
+    453
+    454	0254  83 EE 02				     sub si, 02h
+    455
+Turbo Assembler	 Version 4.1	    02/17/22 20:01:07	    Page 9
+frame.asm
+
+
+
+    456	0257  C3				     ret
+    457	0258			     DrawFrameRow    endp
+    458
+    459				     ;--------------------------------------------------------------------
+    460				     ;--------------------------------------------------------------------
+    461
+    462
+    463	0258  DA C4 BF		     OneBordFrameStyle	     db	0dah, 0c4h, 0bfh
+    464	025B  B3 20 B3							     db	0b3h, 020h, 0b3h
+    465	025E  C0 C4 D9							     db	0c0h, 0c4h, 0d9h
+    466
+    467	0261  C9 CD BB		     TwoBordFrameStyle	     db	0c9h, 0cdh, 0bbh
+    468	0264  BA B0 BA							     db	0bah, 0b0h, 0bah
+    469	0267  C8 CD BC							     db	0c8h, 0cdh, 0bch
+    470
+    471	026A  2B 5F 2B		     ArithFrameStyle	 db 02bh, 05fh,	02bh
+    472	026D  7C 20 7C							     db	07ch, 020h, 07ch
+    473	0270  2B 5F 2B							     db	02bh, 05fh, 02bh
+    474
+    475				     ;--------------------------------------------------------------------
+    476				     ; Global variables
+    477				     ;--------------------------------------------------------------------
+    478
+    479	0273  00 00		     PtrBorderStyleArg	     db	00h, 00h
+    480
+    481	0275  00 00		     PtrMessage			     db	00h, 00h
+    482	0277  00 00		     LenMessage			     db	00h, 00h
+    483
+    484	0279  00 00		     PtrHeader			     db	00h, 00h
+    485	027B  00 00		     LenHeader			     db	00h, 00h
+    486
+    487				     ;--------------------------------------------------------------------
+    488				     ;--------------------------------------------------------------------
+    489
+    490	027D  48 65 6C 6C 6F 20	77+  Text			     db	"Hello world!$"
+    491	      6F 72 6C 64 21 24
+    492	      =000C		     TextLength			     = 12d
+    493
+    494	028A  54 79 70 65 20 61	72+  Error_Type			     db	"Type argument must be number in [0; 3].$"
+    495	      67 75 6D 65 6E 74	20+
+    496	      6D 75 73 74 20 62	65+
+    497	      20 6E 75 6D 62 65	72+
+    498	      20 69 6E 20 5B 30	3B+
+    499	      20 33 5D 2E 24
+    500	02B2  42 6F 72 64 65 72	20+  Error_BorderStyle	     db	"Border	argument must be string, length	== 9.$"
+    501	      61 72 67 75 6D 65	6E+
+    502	      74 20 6D 75 73 74	20+
+    503	      62 65 20 73 74 72	69+
+    504	      6E 67 2C 20 6C 65	6E+
+    505	      67 74 68 20 3D 3D	20+
+    506	      39 2E 24
+    507	02DF  53 74 72 69 6E 67	20+  Error_String	     db	"String	must be	ended with '$'"
+    508	      6D 75 73 74 20 62	65+
+    509	      20 65 6E 64 65 64	20+
+    510	      77 69 74 68 20 27	24+
+    511	      27
+    512	      =001D		     Error_String_Len	     =	29d
+Turbo Assembler	 Version 4.1	    02/17/22 20:01:07	    Page 10
+frame.asm
+
+
+
+    513
+    514				     ;--------------------------------------------------------------------
+    515				     ;--------------------------------------------------------------------
+    516
+    517				     end Start
+Turbo Assembler	 Version 4.1	    02/17/22 20:01:07	    Page 11
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/17/22"
+??FILENAME			  Text	 "frame	  "
+??TIME				  Text	 "20:01:07"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0101H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 FRAME
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+ARITHFRAMESTYLE			  Byte	 DGROUP:026A
+ATTRBACKGROUND			  Number 003F
+ATTRFRAME			  Number 007B
+ATTRSHADOW			  Number 008F
+DRAWFRAME			  Near	 DGROUP:01DD
+DRAWFRAMEROW			  Near	 DGROUP:023A
+DRAWTEXT			  Near	 DGROUP:022D
+ERROR_BORDERSTYLE		  Byte	 DGROUP:02B2
+ERROR_STRING			  Byte	 DGROUP:02DF
+ERROR_STRING_LEN		  Number 001D
+ERROR_TYPE			  Byte	 DGROUP:028A
+HEIGHT				  Number 0006
+LENHEADER			  Byte	 DGROUP:027B
+LENMESSAGE			  Byte	 DGROUP:0277
+ONEBORDFRAMESTYLE		  Byte	 DGROUP:0258
+PARSEBORDERSTYLE		  Near	 DGROUP:01B1
+PARSECMD			  Near	 DGROUP:0130
+PARSEFRAMETYPE			  Near	 DGROUP:0167
+PARSESTRING			  Near	 DGROUP:0147
+PRINTCMD			  Near	 DGROUP:0111
+PTRBORDERSTYLEARG		  Byte	 DGROUP:0273
+PTRHEADER			  Byte	 DGROUP:0279
+PTRMESSAGE			  Byte	 DGROUP:0275
+SCREENHEIGHT			  Number 0019
+SCREENWIDTH			  Number 0050
+START				  Near	 DGROUP:0100
+SYMBOTLEFTCORNER		  Number 00C8
+SYMBOTRIGHTCORNER		  Number 00BC
+SYMHORLINE			  Number 00CD
+SYMSPACE			  Number 0020
+SYMTOPLEFTCORNER		  Number 00C9
+SYMTOPRIGHTCORNER		  Number 00BB
+SYMVERLINE			  Number 00BA
+TEXT				  Byte	 DGROUP:027D
+TEXTLENGTH			  Number 000C
+TWOBORDFRAMESTYLE		  Byte	 DGROUP:0261
+VIDEOSEG			  Number B800
+WIDTH				  Number 0010
+Turbo Assembler	 Version 4.1	    02/17/22 20:01:07	    Page 12
+Symbol Table
+
+
+
+X0				  Number 0010
+Y0				  Number 000A
+__ARITHMETIC_BORDERS		  Near	 DGROUP:01AA
+__CUSTOM			  Near	 DGROUP:019F
+__ENDIF				  Near	 DGROUP:0120
+__EXIT				  Near	 DGROUP:0146
+__EXIT				  Near	 DGROUP:0163
+__EXIT				  Near	 DGROUP:01DB
+__EXIT				  Near	 DGROUP:022C
+__INCORRECT_BORDER_STYLE	  Near	 DGROUP:01BE
+__INCORRECT_STRING		  Near	 DGROUP:0160
+__INCORRECT_TYPE		  Near	 DGROUP:018C
+__LOOP				  Near	 DGROUP:0114
+__LOOP				  Near	 DGROUP:014D
+__LOOP				  Near	 DGROUP:01B8
+__LOOP				  Near	 DGROUP:01F9
+__LOOP				  Near	 DGROUP:022D
+__LOOP				  Near	 DGROUP:0245
+__NEXT				  Near	 DGROUP:01CA
+__ONE_BORDER			  Near	 DGROUP:01A3
+__SWITCH			  Near	 DGROUP:0175
+__TWO_BORDERS			  Near	 DGROUP:0198
+
+Macro Name
+
+.GETCH
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  02FC Word	  Public  CODE
+Turbo Assembler	 Version 4.1	    02/17/22 20:01:07	    Page 13
+Error Summary
+
+
+
+*Warning* frame.asm(14)	Reserved word used as symbol: WIDTH
+
