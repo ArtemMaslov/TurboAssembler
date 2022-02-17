@@ -7,32 +7,6 @@ locals __
 
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
-
-x0				    = 16d	; Frame left top corner x
-y0				    = 10d	; Frame left top corner y
-				    
-Width			    = 16d	; Frame width with borders
-Height			    = 6d	; Frame height with borders
-
-ScreenWidth         = 80d
-ScreenHeight        = 25d
-
-SymHorLine			= 0CDh
-SymVerLine			= 0BAh
-SymTopLeftCorner	= 0C9h
-SymTopRightCorner	= 0BBh
-SymBotLeftCorner	= 0C8h
-SymBotRightCorner	= 0BCh
-SymSpace			= ' '
-
-AttrBackground      = 03Fh ; 0111 0000
-AttrShadow			= 08Fh ; 1000 1111
-AttrFrame			= 07Bh ; 1011 1011 
-
-VideoSeg			= 0B800h
-
-;--------------------------------------------------------------------
-;--------------------------------------------------------------------
 .getch	macro
 		nop
 		xor ah, ah
@@ -142,6 +116,10 @@ ParseCmd	proc
 		
 		mov word ptr [offset PtrMessage], dx
 		mov word ptr [offset LenMessage], cx
+		
+		add cx, FramePadding * 02h
+		mov word ptr [offset FrameWidth], cx
+		
 		; Incorrect string
 		; puts();
 		; mov ah, 40h
@@ -180,17 +158,15 @@ __loop:
 		
 		cmp word ptr [bx], 2424h ; [bx] == "$$"?
 		je __exit
-		
-		cmp byte ptr [bx], 0Dh	 ; [bx] == '\r'?
-		je __exit
 				
 		cmp bx, 100h
 		jb __loop
 		
 __incorrect_string:
 		mov cx, 00h
+		ret
 __exit:
-		sub cx, 02h
+		sub cx, 01h
 		ret
 ParseString		endp
 
@@ -335,24 +311,39 @@ DrawFrame	proc
 		mov ax, VideoSeg
 		mov es, ax
 		
-		mov dx, y0 * ScreenWidth * 02h + x0 * 02h
+		; ax = (ScreenWidth - FrameWidth) / 2 => x0
+		mov ax, ScreenWidth
+		sub ax, word ptr[offset FrameWidth]
+		
+		mov bx, 0002h
+		div bl
+		
+		; x0 = 2 * a
+		mov ah, 00h
+		mul bl
+		
+		mov word ptr [offset x0], ax
+		
+		; Set attribute
+		mov dx, 02h * (y0 * ScreenWidth)
+		add dx, word ptr [offset x0]
 		mov ah, AttrBackground
 		
 		; Draw top line
 		mov di, dx
-		mov cx, 12d
+		mov cx, word ptr [offset FrameWidth]
 		mov si, word ptr [offset PtrBorderStyleArg]
 		
 		call DrawFrameRow
 		
 		; Draw center part
-		mov bx, Height - 02h
+		mov bx, FrameHeight	- 02h
 		add si, 03h
 		
 __loop:
 		add dx, 02h * ScreenWidth
 		mov di, dx
-		mov cx, 12d
+		mov cx, word ptr [offset FrameWidth]
 		
 		call DrawFrameRow
 		
@@ -364,7 +355,7 @@ __loop:
 		add dx, 02h * ScreenWidth
 		add si, 03h
 		mov di, dx
-		mov cx, 12d
+		mov cx, word ptr [offset FrameWidth]
 		
 		call DrawFrameRow
 		
@@ -374,7 +365,9 @@ __loop:
 		je __exit
 		
 		mov si, word ptr [offset PtrMessage]
-		mov di, 02h * (x0 + 01h) + 02h * (y0 + 01h) * ScreenWidth
+		mov dx, 02h * ((01h + FramePadding) + (y0 + 01h) * ScreenWidth)
+		add dx, word ptr [offset x0]
+		mov di, dx
 		mov cx, word ptr [offset LenMessage]
 		
 		call DrawText
@@ -466,6 +459,25 @@ ArithFrameStyle	    db 02bh, 05fh, 02bh
 					
 ;--------------------------------------------------------------------
 ; Global variables
+; ! Little endian
+;--------------------------------------------------------------------
+
+ScreenWidth         = 80d
+ScreenHeight        = 25d
+
+SymHorLine			= 0CDh
+SymVerLine			= 0BAh
+SymTopLeftCorner	= 0C9h
+SymTopRightCorner	= 0BBh
+SymBotLeftCorner	= 0C8h
+SymBotRightCorner	= 0BCh
+SymSpace			= ' '
+
+AttrBackground      = 02Eh ; 0010 1110
+
+VideoSeg			= 0B800h
+
+;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
 
 PtrBorderStyleArg	db 00h, 00h
@@ -473,8 +485,15 @@ PtrBorderStyleArg	db 00h, 00h
 PtrMessage			db 00h, 00h
 LenMessage			db 00h, 00h
 
-PtrHeader			db 00h, 00h
-LenHeader			db 00h, 00h
+PtrHeader			db 00h, 00h		
+LenHeader			db 00h, 00h		
+
+x0				    db 00h, 00h		; Frame left top corner x
+y0				    = 6d			; Frame left top corner y
+
+FrameWidth			db 32d, 00h		; Frame width  with borders
+FrameHeight		    = 6d			; Frame height with borders
+FramePadding		= 6d 
 					
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
