@@ -1,0 +1,12 @@
+
+del GETDATE.LST
+del GETDATE.MAP
+del GETDATE.OBJ
+
+del SETDATE.LST
+del SETDATE.MAP
+del SETDATE.OBJ
+
+del clear~1.bak
+del SETDAT~1.bak
+del GETDAT~1.bak
