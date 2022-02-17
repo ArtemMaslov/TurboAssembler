@@ -2,8 +2,10 @@
 .CODE
 ORG 100h
 
+locals __
+
 ;--------------------------------------------------------------------
-; 		main
+; Main
 ;--------------------------------------------------------------------
 START:							
 		; puts(Today is); 
@@ -63,18 +65,18 @@ START:
 		INT 21h
 
 ;--------------------------------------------------------------------
-; 		Print decimal number to console.
-; 		Input: 
-;			ax - number to be printed.
+; Print decimal number to console.
+; Entry: 
+;		ax - number to be printed.
+; Destr: ax, dx, cx, bx
 ;--------------------------------------------------------------------
-
 PrintDateNum:
 		PUSH bp
 		MOV  bp, sp
 		
 		; putc('0;); Print lead 0, if number < 10.
 		CMP ax, 0Ah
-		JAE PrintDateNum_Init
+		JAE __date_num_init
 		
 		PUSH ax
 		MOV dx, '0'
@@ -82,7 +84,7 @@ PrintDateNum:
 		INT 21h
 		POP ax
 		
-PrintDateNum_Init:
+__date_num_init:
 		MOV cx, ax 				; cx = num
 		MOV ax, 0001h
 		MOV bx, 000Ah
@@ -91,10 +93,10 @@ PrintDateNum_Init:
 		; Find the ax = 10^n, there n - number of digits in cx:
 		; Let  cx == 1234567d
 		; Then ax == 1000000d
-PrintDateNum_Cycle1:			
+__loop1:			
 		MUL bx
 		CMP ax, cx
-		jbe PrintDateNum_Cycle1
+		JBE __loop1
 		; Let cx == 1234567d
 		; Now ax == 10000000d
 		; So let's divide ax by 10d
@@ -111,7 +113,7 @@ PrintDateNum_Cycle1:
 		; ax == number;
 		; cx == 10^n;
 		; Print number to console
-PrintDateNum_PrintNumber:
+__loop2:
 		DIV cx
 		; ax = ax / cx;
 		; dx = ax % cx;
@@ -136,72 +138,75 @@ PrintDateNum_PrintNumber:
 		POP ax					; ax = number
 		
 		CMP cx, 00h				; while (cx > 0);
-		JA PrintDateNum_PrintNumber
+		JA __loop2
 					
 		MOV sp, bp
 		POP bp
 		RET
 			
-			
+;--------------------------------------------------------------------
 ; Prints day of week: Monday, Tuesday, ...
-; Input: al is number of day of week (0 - sunday, 1 - monday, ..., 6 - saturday)
+; Entry: 
+;		al - number of day of week (0 - sunday, 1 - monday, ..., 6 - saturday)
+; Destr: ax, dx
+;--------------------------------------------------------------------
 PrintDayOfWeek:
 		; if (day is Saturday)
 		CMP al, 06h
-		JE Sat
+		JE __Sat
 		; else if (day is Friday)
 		CMP al, 05h
-		JE Fri
+		JE __Fri
 		; else if (day is Thursday)
 		CMP al, 04h
-		JE Thu
+		JE __Thu
 		; else if (day is Wednesday)
 		CMP al, 03h
-		JE Wed
+		JE __Wed
 		; else if (day is Tuesday)
 		CMP al, 02h
-		JE Tue
+		JE __Tue
 		; else if (day is Monday)
 		CMP al, 01h
-		JE Mon
+		JE __Mon
 		; else day is Sunday
-Sun:								; day number is 0
+__Sun:								; day number is 0
 		MOV ah, 09h
 		MOV dx, offset Sunday
 		INT 21h
 		
 		RET
-Sat:								; day number is 6
+__Sat:								; day number is 6
 		MOV ah, 09h
 		MOV dx, offset Saturday
 		INT 21h
 		
 		RET
-Fri:								; day number is 5
+__Fri:								; day number is 5
 		MOV ah, 09h
 		MOV dx, offset Friday
 		INT 21h
 
 		RET
-Thu:								; day number is 4
+__Thu:								; day number is 4
 		MOV ah, 09h
 		MOV dx, offset Thursday
 		INT 21h
 
 		RET
-Wed:								; day number is 3
+__Wed:								; day number is 3
 		MOV ah, 09h
 		MOV dx, offset Wednesday
 		INT 21h
 
 		RET
-Tue:								; day number is 2
+__Tue:								; day number is 2
 		MOV ah, 09h
 		MOV dx, offset Tuesday
 		INT 21h
 
 		RET
-Mon:								; day number is 1
+__Mon:								; day number is 1
 		MOV ah, 09h
 		MOV dx, offset Monday
 		INT 21h

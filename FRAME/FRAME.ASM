@@ -459,7 +459,6 @@ ArithFrameStyle	    db 02bh, 05fh, 02bh
 					
 ;--------------------------------------------------------------------
 ; Global variables
-; ! Little endian
 ;--------------------------------------------------------------------
 
 ScreenWidth         = 80d
@@ -491,6 +490,7 @@ LenHeader			db 00h, 00h
 x0				    db 00h, 00h		; Frame left top corner x
 y0				    = 6d			; Frame left top corner y
 
+; !!! Little endian
 FrameWidth			db 32d, 00h		; Frame width  with borders
 FrameHeight		    = 6d			; Frame height with borders
 FramePadding		= 6d 
