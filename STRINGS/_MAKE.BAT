@@ -6,4 +6,4 @@ del strings.obj
 del strings.map
 
 del _make~1.bak
-del strings~1.bak
+del string~1.bak

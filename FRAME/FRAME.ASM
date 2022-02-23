@@ -105,7 +105,7 @@ PrintCmd	endp
 ;--------------------------------------------------------------------
 ParseCmd	proc
 		
-		mov bx, 82h ; Cmd first char
+		mov bx, 82h ; Cmd first char address
 				
 		call ParseFrameType
 		
@@ -156,7 +156,7 @@ __loop:
 		inc bx
 		inc cx
 		
-		cmp word ptr [bx], 2424h ; [bx] == "$$"?
+		cmp word ptr [bx], '$$'
 		je __exit
 				
 		cmp bx, 100h
@@ -195,18 +195,18 @@ ParseFrameType	proc
 		jne __incorrect_type
 		
 __switch:
-		add bx, 2
+		add bx, 02h
 		
-		cmp dl, 30h
+		cmp dl, '0'
 		je __custom
 		
-		cmp dl, 31h
+		cmp dl, '1'
 		je __one_border
 		
-		cmp dl, 32h
+		cmp dl, '2'
 		je __two_borders
 		
-		cmp dl, 33h
+		cmp dl, '3'
 		je __arithmetic_borders
 		
 		; Incorrect type

@@ -10,35 +10,11 @@ org 100h
 ;--------------------------------------------------------------------
 start:
 
-	call ItoaUnitTests
+	call Cdecl_StrChrUnitTests
 
 	mov ax, 4c00h
 	int 21h
-	
-;--------------------------------------------------------------------
-; Test StrLen function
-;
-; Destr: cx, bp, si, bx
-;--------------------------------------------------------------------
-StrLenUnitTests	proc
 		
-		mov cx, 00h
-		mov bp, 00h
-		
-__loop:
-		mov si, word ptr [offset StrPtrs + bp]
-		
-		call StrLen
-		
-		inc cx
-		add bp, 2
-		
-		cmp cx, StrCount
-		jb __loop
-		
-		ret
-StrLenUnitTests endp
-	
 ;--------------------------------------------------------------------
 ; Measure string length. String must be '\0'-terminated
 ;
@@ -61,53 +37,6 @@ __loop:
 				
 		ret
 StrLen			endp
-	
-;--------------------------------------------------------------------
-; Test StrChr function
-;
-; Destr: bx, al, si
-;--------------------------------------------------------------------
-StrChrUnitTests	proc
-		
-		mov si, offset Str1
-		
-		mov al, '1'
-		call StrChr
-		
-		mov al, '2'
-		call StrChr
-		
-		mov al, '6'
-		call StrChr
-		
-		mov al, '9'
-		call StrChr
-		
-		mov al, '0'
-		call StrChr
-		
-		mov al, 'a'
-		call StrChr
-
-		mov si, offset Str6
-		
-		mov al, 'q'
-		call StrChr
-		
-		mov al, ' '
-		call StrChr
-		
-		mov al, 'y'
-		call StrChr
-		
-		mov al, 't'
-		call StrChr
-		
-		mov al, 'e'
-		call StrChr
-		
-		ret
-StrChrUnitTests endp
 
 ;--------------------------------------------------------------------
 ; Find symbol in the string
@@ -135,7 +64,7 @@ __loop:
 		jne __loop
 		
 		; Symbol wasn't found
-		mov bx, 00
+		mov bx, 00h
 		
 		ret
 		
@@ -144,33 +73,6 @@ __sym_found:
 
 		ret
 StrChr			endp
-
-;--------------------------------------------------------------------
-; Test StrCpy function
-;
-; Destr: si, di, bx, al, bp, cx
-;--------------------------------------------------------------------
-StrCpyUnitTests	proc
-		
-		mov cx, 00h
-		mov bp, 00h
-		
-		mov di, offset Array
-		
-__loop:
-		mov si, word ptr [offset StrPtrs + bp]
-		
-		call StrCpy
-		add di, bx
-		add bp, 2
-		
-		inc cx
-		
-		cmp cx, StrCount
-		jb __loop
-		
-		ret
-StrCpyUnitTests endp
 
 ;--------------------------------------------------------------------
 ; Copy si to di. si - '\0'-terminated string.
@@ -202,55 +104,6 @@ __loop:
 		
 		ret
 StrCpy			endp
-
-;--------------------------------------------------------------------
-; Test StrNCpy function
-;
-; Destr: si, di, bx, al, bp, cx
-;--------------------------------------------------------------------
-StrNCpyUnitTests	proc
-		
-		mov bx, 00h
-		
-		mov si, offset Str1
-		mov di, offset Array
-		mov cx, 00h
-		
-		call StrNCpy
-		
-		mov cx, 1d
-		call StrNCpy
-		
-		mov cx, 5d
-		call StrNCpy
-		
-		mov cx, 10d
-		call StrNCpy
-		
-		mov cx, 20d
-		call StrNCpy
-		
-		mov si, offset Str3
-		
-		mov cx, 0d
-		call StrNCpy
-		
-		mov cx, 1d
-		call StrNCpy
-		
-		mov cx, 5d
-		call StrNCpy
-		
-		mov si, offset Str6
-		
-		mov cx, 5d
-		call StrNCpy
-		
-		mov cx, 8d
-		call StrNCpy		
-		
-		ret
-StrNCpyUnitTests endp
 
 ;--------------------------------------------------------------------
 ; Copy n symbols from si to di. si - '\0'-terminated string.
@@ -292,61 +145,6 @@ __loop:
 __exit:
 		ret
 StrNCpy			endp
-
-;--------------------------------------------------------------------
-; Test StrCmp function
-;
-; Destr: si, bx, al, di
-;--------------------------------------------------------------------
-StrCmpUnitTests	proc
-		
-		mov si, offset Str1
-		mov di, offset Str2
-		
-		call StrCmp ; 2
-		
-		mov di, offset Str1
-		mov si, offset Str2
-		
-		call StrCmp ; 1
-		
-		mov si, offset StrCmp1
-		mov di, offset StrCmp2
-		
-		call StrCmp ; 2
-		
-		mov si, offset StrCmp1
-		mov di, offset StrCmp3
-		
-		call StrCmp ; 2
-		
-		mov si, offset Str6
-		mov di, offset StrCmp4
-		
-		call StrCmp ; 1
-		
-		mov si, offset Str3
-		mov di, offset Str3
-		
-		call StrCmp ; 0
-		
-		mov si, offset Str2
-		mov di, offset Str2
-		
-		call StrCmp ; 0
-		
-		mov si, offset Str1
-		mov di, offset Str5
-		
-		call StrCmp ; 2
-		
-		mov si, offset Str5
-		mov di, offset Str1
-		
-		call StrCmp ; 1
-		
-		ret
-StrCmpUnitTests endp
 
 ;--------------------------------------------------------------------
 ; Compares strings
@@ -411,29 +209,6 @@ __di_is_null:	; di == 0, si != 0 => si > di
 StrCmp			endp
 
 ;--------------------------------------------------------------------
-; Test Atoi function
-;
-; Destr: bp, si, ax, bx, cx, dx
-;--------------------------------------------------------------------
-AtoiUnitTests	proc
-		
-		mov bp, 00h
-		jmp __body
-		
-__loop:
-		add bp, 2
-__body:
-		mov si, word ptr [offset StrNums + bp]
-		
-		call Atoi
-
-		cmp bp, StrNumsCount * 2
-		jb __loop
-						
-		ret
-AtoiUnitTests endp
-
-;--------------------------------------------------------------------
 ; Convert alpha to number
 ;
 ; Entry:
@@ -478,46 +253,12 @@ __exit:
 Atoi			endp
 
 ;--------------------------------------------------------------------
-; Test Itoa function
-;
-; Destr: si, ax, bx, cx, dx
 ;--------------------------------------------------------------------
-ItoaUnitTests	proc
-		
-		mov si, offset Array
-		
-		mov ax, 65535
-		call Itoa
-				
-		mov ax, 0
-		call Itoa
-				
-		mov ax, 1
-		call Itoa
-		
-		mov ax, 123
-		call Itoa
-		
-		mov ax, 653
-		call Itoa
-		
-		mov ax, 0804
-		call Itoa
-		
-		mov ax, 1000
-		call Itoa
-		
-		mov ax, 736
-		call Itoa
-		
-		mov ax, 1353
-		call Itoa
-		
-		mov ax, 60000
-		call Itoa
-						
-		ret
-ItoaUnitTests endp
+;--------------------------------------------------------------------
+; Itoa functions area
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
 
 ;--------------------------------------------------------------------
 ; Convert decimal number to alpha
@@ -569,30 +310,26 @@ ItoaDec			endp
 ;		 ax - source number
 ;		 si - string destination
 ;
-; Destr: ax, bx, cx, dx
+; Destr: ax, bx, cl, bp
 ;--------------------------------------------------------------------
 ItoaHex			proc
-		mov bx, 00h
-		mov cx, 0F000h
-						
+		mov bp, 05h
+		
 __loop:
-		mov dx, ax
-		and dx, cx
+		mov bx, ax
+		and bx, 000Fh
 		
-		cmp dx, 00h
-		je __putc0
+		mov cl, byte ptr [offset HexConvert + bx]
+		mov byte ptr [si + bp], cl
 		
-		mov byte ptr [si + bx], 31h
-		jmp __step
-__putc0:
-		mov byte ptr [si + bx], 30h
+		; step
+		dec bp
+		shr ax, 04h
 		
-__step:
-		inc bx
-		shr cx, 01h
-		
-		cmp cx, 00h
+		cmp bp, 01h
 		ja __loop
+		
+		mov word ptr [si + bp - 01h], 'x0'
 		
 		ret
 ItoaHex			endp
@@ -604,48 +341,30 @@ ItoaHex			endp
 ;		 ax - source number
 ;		 si - string destination
 ;
-; Destr: ax, bx, cx, dx
+; Destr: ax, bx, dl
 ;--------------------------------------------------------------------
-Itoa			proc
-		mov bx, 00h
-		mov cx, 8000h
-		
-		mov dx, ax
-		and dx, cx
-		
-		cmp dx, 00h
-		je __putc0
-		
-		mov byte ptr [si + bx], 31h
-		jmp __init
-__putc0:
-		mov byte ptr [si + bx], 30h
-		
-__init:
-		inc bx
-		mov cx, 7000h
+ItoaOct			proc
+		mov bx, 08h
 		
 __loop:
-		mov dx, ax
-		and dx, cx
+		mov dl, al
+		and dl, 07h
 		
-		cmp dx, 00h
-		je __putc0
+		add dl, 30h
 		
-		mov byte ptr [si + bx], 31h
-		jmp __step
-__putc0:
-		mov byte ptr [si + bx], 30h
+		mov byte ptr [si + bx], dl
 		
-__step:
-		inc bx
-		shr cx, 03h
+		; step
+		dec bx
+		shr ax, 03h
 		
-		cmp cx, 00h
+		cmp bx, 01h
 		ja __loop
 		
+		mov word ptr [si + bx - 01h], 'q0'
+		
 		ret
-Itoa			endp
+ItoaOct			endp
 
 ;--------------------------------------------------------------------
 ; Convert binary number to alpha
@@ -659,7 +378,11 @@ Itoa			endp
 ItoaBin			proc
 		mov bx, 00h
 		mov cx, 8000h
-						
+		
+		mov word ptr [si + bx], 'b0'
+		
+		add bx, 02h
+		
 __loop:
 		mov dx, ax
 		and dx, cx
@@ -672,7 +395,7 @@ __loop:
 __putc0:
 		mov byte ptr [si + bx], 30h
 		
-__step:
+__step: ; step
 		inc bx
 		shr cx, 01h
 		
@@ -683,13 +406,646 @@ __step:
 ItoaBin			endp
 	
 ;--------------------------------------------------------------------
-; Data Area
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+; Cdecl functions area
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+
+;--------------------------------------------------------------------
+; Measure string length. String must be '\0'-terminated
+;
+; Entry: first arg - string address
+;
+; Out:	 bx - string length without '\0'
+;
+; Destr: bx
+;--------------------------------------------------------------------
+Cdecl_StrLen		proc
+		push bp
+		mov bp, sp
+		
+		mov si, word ptr [bp + 04h]
+		
+		call StrLen
+		
+		pop bp
+		ret 2*1
+Cdecl_StrLen		endp
+
+;--------------------------------------------------------------------
+; Find symbol in the string
+;
+; Entry: 1 arg - string address
+;		 2 arg - symbol to be found
+;
+; Out:	 bx - ptr of symbol or 0000 if symbol wasn't found.
+;
+; Destr: bx
+;--------------------------------------------------------------------
+	
+Cdecl_StrChr		proc
+		push bp
+		mov bp, sp
+		
+		mov si, word ptr [bp + 04h]
+		mov al, byte ptr [bp + 06h]
+		
+		call StrChr
+		
+		pop bp
+		ret 2*2
+Cdecl_StrChr		endp
+
+;--------------------------------------------------------------------
+; Find symbol in the string
+;
+; Entry: 1 arg - string address
+;		 2 arg - symbol to be found
+;
+; Out:	 bx - ptr of symbol or 0000 if symbol wasn't found.
+;
+; Destr: bx
+;--------------------------------------------------------------------
+	
+Pascal_StrChr		proc
+		push bp
+		mov bp, sp
+		
+		mov al, byte ptr [bp + 04h]
+		mov si, word ptr [bp + 06h]
+		
+		call StrChr
+		
+		pop bp
+		ret 2*2
+Pascal_StrChr		endp
+
+;--------------------------------------------------------------------
+; Copy si to di. si - '\0'-terminated string.
+;
+; Entry: 1 arg - source string
+;		 2 arg - destination string
+;		 
+; Out:	 bx - string length with '\0'
+;
+; Destr: bx, al
+;--------------------------------------------------------------------
+Cdecl_StrCpy			proc
+		push bp
+		mov bp, sp
+		
+		mov si, word ptr [bp + 04h]
+		mov di, word ptr [bp + 06h]
+		
+		call StrCpy
+		
+		pop bp
+		ret 2*2
+Cdecl_StrCpy			endp
+
+;--------------------------------------------------------------------
+; Copy si to di. si - '\0'-terminated string.
+;
+; Entry: 1 arg - source string
+;		 2 arg - destination string
+;		 
+; Out:	 bx - string length with '\0'
+;
+; Destr: bx, al
+;--------------------------------------------------------------------
+Pascal_StrCpy			proc
+		push bp
+		mov bp, sp
+		
+		mov di, word ptr [bp + 04h]
+		mov si, word ptr [bp + 06h]
+		
+		call StrCpy
+		
+		pop bp
+		ret 2*2
+Pascal_StrCpy			endp
+
+;--------------------------------------------------------------------
+; Copy n symbols from si to di. si - '\0'-terminated string.
+;
+; Entry: 1 arg - source string
+;		 2 arg - destination string
+;		 3 arg - count symbols to copy
+;
+; Out:   bx - number of copied symbols
+;
+; Destr: bx, al
+;--------------------------------------------------------------------
+Cdecl_StrNCpy			proc
+		push bp
+		mov bp, sp
+		
+		mov si, word ptr [bp + 04h]
+		mov di, word ptr [bp + 06h]
+		mov cx, word ptr [bp + 08h]
+		
+		call StrNCpy
+		
+		pop bp
+		ret 2*3
+Cdecl_StrNCpy			endp
+
+;--------------------------------------------------------------------
+; Copy n symbols from si to di. si - '\0'-terminated string.
+;
+; Entry: 1 arg - source string
+;		 2 arg - destination string
+;		 3 arg - count symbols to copy
+;
+; Out:   bx - number of copied symbols
+;
+; Destr: bx, al
+;--------------------------------------------------------------------
+Pascal_StrNCpy			proc
+		push bp
+		mov bp, sp
+		
+		mov cx, word ptr [bp + 04h]
+		mov di, word ptr [bp + 06h]
+		mov si, word ptr [bp + 08h]
+		
+		call StrNCpy
+		
+		pop bp
+		ret 2*3
+Pascal_StrNCpy			endp
+
+;--------------------------------------------------------------------
+; Compares strings
+;
+; Entry: 1 arg - source string
+;		 2 arg - destination string
+;
+; Out:	 al == 0 if si == di
+;		 al == 1 if si >  di
+;		 al == 2 if si <  di
+;
+; Destr: bx, al
+;--------------------------------------------------------------------
+Cdecl_StrCmp			proc
+		push bp
+		mov bp, sp
+		
+		mov si, word ptr [bp + 04h]
+		mov di, word ptr [bp + 06h]
+		
+		call StrCmp
+		
+		pop bp
+		ret 2*2
+Cdecl_StrCmp			endp
+
+;--------------------------------------------------------------------
+; Convert alpha to number
+;
+; Entry: 1 arg - source string
+;
+; Out:	 ax - out number
+;
+; Destr: ax, bx, cx, dx
+;--------------------------------------------------------------------
+Cdecl_Atoi			proc
+		push bp
+		mov bp, sp
+		
+		mov si, word ptr [bp + 04h]
+		
+		call Atoi
+		
+		pop bp
+		ret 2*1
+Cdecl_Atoi			endp
+	
+;--------------------------------------------------------------------
+; Convert decimal number to alpha
+;
+; Entry: 1 arg - source number
+;		 2 arg - string destination
+;
+; Destr: ax, bx, cx, dx
+;--------------------------------------------------------------------
+Cdecl_ItoaDec			proc
+		push bp
+		mov bp, sp
+		
+		mov ax, word ptr [bp + 04h]
+		mov si, word ptr [bp + 06h]
+		
+		call ItoaDec
+		
+		pop bp
+		ret 2*2
+Cdecl_ItoaDec			endp
+	
+;--------------------------------------------------------------------
+; Convert hexidecimal number to alpha
+;
+; Entry: 1 arg - source number
+;		 2 arg - string destination
+;
+; Destr: ax, bx, cl, bp
+;--------------------------------------------------------------------
+Cdecl_ItoaHex			proc
+		push bp
+		mov bp, sp
+		
+		mov ax, word ptr [bp + 04h]
+		mov si, word ptr [bp + 06h]
+		
+		call ItoaHex
+		
+		pop bp
+		ret 2*2
+Cdecl_ItoaHex			endp
+
+;--------------------------------------------------------------------
+; Convert octal number to alpha
+;
+; Entry: 1 arg - source number
+;		 2 arg - string destination
+;
+; Destr: ax, bx, dl
+;--------------------------------------------------------------------
+Cdecl_ItoaOct			proc
+		push bp
+		mov bp, sp
+		
+		mov ax, word ptr [bp + 04h]
+		mov si, word ptr [bp + 06h]
+		
+		call ItoaOct
+		
+		pop bp
+		ret 2*2
+Cdecl_ItoaOct			endp
+
+;--------------------------------------------------------------------
+; Convert binary number to alpha
+;
+; Entry: 1 arg - source number
+;		 2 arg - string destination
+;
+; Destr: ax, bx, cx, dx
+;--------------------------------------------------------------------
+Cdecl_ItoaBin			proc
+		push bp
+		mov bp, sp
+		
+		mov ax, word ptr [bp + 04h]
+		mov si, word ptr [bp + 06h]
+		
+		call ItoaBin
+		
+		pop bp
+		ret 2*2
+Cdecl_ItoaBin			endp
+
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+; Test functions area
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+
+;--------------------------------------------------------------------
+; Test StrLen function
+;
+; Destr: cx, bp, si, bx
+;--------------------------------------------------------------------
+StrLenUnitTests	proc
+		
+		mov cx, 00h
+		mov bp, 00h
+		
+__loop:
+		mov si, word ptr [offset StrPtrs + bp]
+		
+		call StrLen
+		
+		inc cx
+		add bp, 02h
+		
+		cmp cx, StrCount
+		jb __loop
+		
+		ret
+StrLenUnitTests endp
+
+;--------------------------------------------------------------------
+; Test StrChr function
+;
+; Destr: bx, al, si
+;--------------------------------------------------------------------
+StrChrUnitTests	proc
+		
+		mov si, offset Str1
+		
+		mov al, '1'
+		call StrChr
+		
+		mov al, '2'
+		call StrChr
+		
+		mov al, '6'
+		call StrChr
+		
+		mov al, '9'
+		call StrChr
+		
+		mov al, '0'
+		call StrChr
+		
+		mov al, 'a'
+		call StrChr
+
+		mov si, offset Str6
+		
+		mov al, 'q'
+		call StrChr
+		
+		mov al, ' '
+		call StrChr
+		
+		mov al, 'y'
+		call StrChr
+		
+		mov al, 't'
+		call StrChr
+		
+		mov al, 'e'
+		call StrChr
+		
+		ret
+StrChrUnitTests endp
+
+Cdecl_StrChrUnitTests	proc
+		
+		;mov si, offset Str1
+		mov dx, offset Str1
+		
+		mov cx, '01'
+		push cx
+		push dx
+		
+		call Cdecl_StrChr
+		
+		mov cx, '02'
+		push cx
+		push dx
+		
+		call Cdecl_StrChr
+		
+		mov cx, '05'
+		push cx
+		push dx
+		
+		call Cdecl_StrChr
+		
+		mov cx, '09'
+		push cx
+		push dx
+		
+		call Cdecl_StrChr
+		
+		mov cx, '00'
+		push cx
+		push dx
+		
+		call Cdecl_StrChr
+				
+		ret
+Cdecl_StrChrUnitTests endp
+
+;--------------------------------------------------------------------
+; Test StrCpy function
+;
+; Destr: si, di, bx, al, bp, cx
+;--------------------------------------------------------------------
+StrCpyUnitTests	proc
+		
+		mov cx, 00h
+		mov bp, 00h
+		
+		mov di, offset Array
+		
+__loop:
+		mov si, word ptr [offset StrPtrs + bp]
+		
+		call StrCpy
+		add di, bx
+		add bp, 02h
+		
+		inc cx
+		
+		cmp cx, StrCount
+		jb __loop
+		
+		ret
+StrCpyUnitTests endp
+
+;--------------------------------------------------------------------
+; Test StrNCpy function
+;
+; Destr: si, di, bx, al, bp, cx
+;--------------------------------------------------------------------
+StrNCpyUnitTests	proc
+		
+		mov bx, 00h
+		
+		mov si, offset Str1
+		mov di, offset Array
+		mov cx, 00h
+		
+		call StrNCpy
+		
+		mov cx, 1d
+		call StrNCpy
+		
+		mov cx, 5d
+		call StrNCpy
+		
+		mov cx, 10d
+		call StrNCpy
+		
+		mov cx, 20d
+		call StrNCpy
+		
+		mov si, offset Str3
+		
+		mov cx, 0d
+		call StrNCpy
+		
+		mov cx, 1d
+		call StrNCpy
+		
+		mov cx, 5d
+		call StrNCpy
+		
+		mov si, offset Str6
+		
+		mov cx, 5d
+		call StrNCpy
+		
+		mov cx, 8d
+		call StrNCpy		
+		
+		ret
+StrNCpyUnitTests endp
+
+;--------------------------------------------------------------------
+; Test StrCmp function
+;
+; Destr: si, bx, al, di
+;--------------------------------------------------------------------
+StrCmpUnitTests	proc
+		
+		mov si, offset Str1
+		mov di, offset Str2
+		
+		call StrCmp ; 2
+		
+		mov di, offset Str1
+		mov si, offset Str2
+		
+		call StrCmp ; 1
+		
+		mov si, offset StrCmp1
+		mov di, offset StrCmp2
+		
+		call StrCmp ; 2
+		
+		mov si, offset StrCmp1
+		mov di, offset StrCmp3
+		
+		call StrCmp ; 2
+		
+		mov si, offset Str6
+		mov di, offset StrCmp4
+		
+		call StrCmp ; 1
+		
+		mov si, offset Str3
+		mov di, offset Str3
+		
+		call StrCmp ; 0
+		
+		mov si, offset Str2
+		mov di, offset Str2
+		
+		call StrCmp ; 0
+		
+		mov si, offset Str1
+		mov di, offset Str5
+		
+		call StrCmp ; 2
+		
+		mov si, offset Str5
+		mov di, offset Str1
+		
+		call StrCmp ; 1
+		
+		ret
+StrCmpUnitTests endp
+
+;--------------------------------------------------------------------
+; Test Atoi function
+;
+; Destr: bp, si, ax, bx, cx, dx
+;--------------------------------------------------------------------
+AtoiUnitTests	proc
+		
+		mov bp, 00h
+		jmp __body
+		
+__loop:
+		add bp, 02h
+__body:
+		mov si, word ptr [offset StrNums + bp]
+		
+		call Atoi
+
+		cmp bp, StrNumsCount * 02h
+		jb __loop
+						
+		ret
+AtoiUnitTests endp
+	
+;--------------------------------------------------------------------
+; Test Itoa function
+; To use:
+;		1. Delete empty Itoa function
+;		2. Rename ItoaX function to Itoa. Where X in {Dec, Bin, Oct, Hex}.
+;
+; Destr: si, ax, bx, cx, dx, bp
+;--------------------------------------------------------------------
+ItoaUnitTests	proc
+		
+		mov si, offset Array
+		
+		mov ax, 65535d
+		call Itoa
+				
+		mov ax, 0d
+		call Itoa
+				
+		mov ax, 1d
+		call Itoa
+		
+		mov ax, 123d
+		call Itoa
+		
+		mov ax, 653d
+		call Itoa
+		
+		mov ax, 0804d
+		call Itoa
+		
+		mov ax, 1000d
+		call Itoa
+		
+		mov ax, 736d
+		call Itoa
+		
+		mov ax, 1353d
+		call Itoa
+		
+		mov ax, 60000d
+		call Itoa
+						
+		ret
+ItoaUnitTests endp
+
+Itoa		proc
+		nop
+		nop
+		nop
+		
+		ret
+Itoa 		endp
+
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+; Data area
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
 
 			db 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
 			db 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh, 0FFh
 			db 00h,  00h,  00h,  00h,  00h,  00h,  00h,  00h
 			db 00h,  00h,  00h,  00h,  00h,  00h,  00h,  00h
+
+HexConvert	db '0123456789ABCDEF'
 
 StrPtrs		dw Str1
 			dw Str2
