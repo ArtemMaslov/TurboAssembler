@@ -11,6 +11,7 @@ org 100h
 start:
 
 		call Set_Int09
+		call Set_Int08
 		
 		; call DrawFrame
 		
@@ -42,6 +43,11 @@ __extra_parag:
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
 
+;--------------------------------------------------------------------
+; Overrides 09h interrupt (keyboard)
+;
+; Destr: ax, bx, dx, es
+;--------------------------------------------------------------------
 Set_Int09			proc
 		
 		xor bx, bx
@@ -67,6 +73,33 @@ Set_Int09			proc
 		ret
 Set_Int09			endp
 
+;--------------------------------------------------------------------
+; Overrides 08h interrupt (timer)
+;
+; Destr: ax, bx, dx, es
+;--------------------------------------------------------------------
+Set_Int08			proc
+		
+		; Save old handler
+		mov ax, 3508h
+		int 21h
+		
+		mov word ptr [offset Old_Int08], bx
+		mov word ptr [offset Old_Int08 + 02h], es
+		
+		; Set new handler
+		mov ax, 2508h
+		mov dx, offset Override_Int08
+		int 21h
+		
+		ret
+Set_Int08			endp
+
+;--------------------------------------------------------------------
+; Int 09 handler
+;
+; Destr: null
+;--------------------------------------------------------------------
 Override_Int09		proc
 		push ax di es
 		
@@ -92,10 +125,9 @@ Old_Int09:
 __hotkey:			
 		; Run my int handler
 		
-		push cx bx dx si
-		call DrawFrame
-		call DrawRegisters
-		pop si dx bx cx
+		mov al, byte ptr cs:[FrameEnabled]
+		not al
+		mov byte ptr cs:[FrameEnabled], al
 		
 		; Set signal to keyboard controller
 		in al, 61h
@@ -113,33 +145,143 @@ __hotkey:
 		
 		pop es di ax
 		iret
-		
 Override_Int09		endp
 
+;--------------------------------------------------------------------
+; Int 08 handler
+;
+; Destr: null
+;--------------------------------------------------------------------
+Override_Int08		proc
 
+		; Run old int handler
+		pushf ; Simulate interrupt
+		call dword ptr cs:[Old_Int08]
+		
+		; Run my handler
+		cmp byte ptr cs:[FrameEnabled], 00h
+		ja __enable_frame
+		
+		; Disable frame
+		
+		iret
+		
+__enable_frame:
+		
+		push es si di dx cx bx ax
+		
+		call DrawFrame
+		
+		call DrawRegisters
+		
+		pop ax bx cx dx di si es
+		
+		iret
+Override_Int08		endp
 
+;--------------------------------------------------------------------
+; Draws registers into frame
+;
+; Entry:
+;		 es - Video segment
+;
+; Destr: ax, bx, cx, dx, si, di
+;--------------------------------------------------------------------
 DrawRegisters		proc
+		push bp
+		mov bp, sp
+		add bp, 04h
 		
-		mov cx, 5d
 		mov ah, AttrBackground
-		mov si, offset RegAx
-		mov di, 02d * ((y0 + FramePadding)* ScreenWidth + x0 + FramePadding)
+		mov si, offset Regs1
+		mov di, 02d * ((y0 + 01d) * ScreenWidth + x0 + FramePadding)
 		
-		call DrawText
+		; <Draw Registers
+		mov cx, Regs1Count
+		call DrawRegisterBlock
+				
+		add di, 02d * ScreenWidth
+		mov cx, Regs2Count
+		call DrawRegisterBlock
 		
-		mov ax, 0deadh
+		add di, 02d * ScreenWidth
+		mov cx, Regs3Count
+		call DrawRegisterBlock
 		
-		call VideoItoaHex
+		add di, 02d * ScreenWidth
+		mov cx, Regs4Count
+		call DrawRegisterBlock
+		; Draw Registers/>
 		
+		; <Draw separators
+		mov si, offset SeparatorFrameStyle
+		
+		mov di, 02d * ((y0 + 01d + Regs1Count) * ScreenWidth + x0)
+		mov cx, FrameWidth
+		call DrawFrameRow
+		
+		mov di, 02d * ((y0 + 01d + Regs1Count + 01d + Regs2Count) * ScreenWidth + x0)
+		mov cx, FrameWidth
+		call DrawFrameRow
+		
+		mov di, 02d * ((y0 + 01d + Regs1Count + 01d + Regs2Count + 01d + Regs3Count) * ScreenWidth + x0)
+		mov cx, FrameWidth
+		call DrawFrameRow
+		; Draw separators/>
+		
+		pop bp
 		ret
 DrawRegisters		endp
+
+;--------------------------------------------------------------------
+; Draws registers block into frame
+;
+; Entry:
+;		 ah - background attribute
+;		 cx - registers count
+;		 si - registers array address
+;		 di - video address
+;
+; Destr: al, bx, cx, dx, si, di
+;--------------------------------------------------------------------
+DrawRegisterBlock	proc
+		
+__loop:
+		; Print '<reg> =', where <reg> = ax, bx, cx, ...
+		mov al, byte ptr cs:[si]
+		inc si
+		stosw
+		
+		mov al, byte ptr cs:[si]
+		inc si
+		stosw
+		
+		mov al, 20h		; space ' '
+		stosw
+		
+		mov al, '='
+		stosw
+		; Print '<reg> =', where <reg> = ax, bx, cx, ...	
+		
+		push [bp]
+		call VideoItoaHex
+		add bp, 02
+		
+		dec cx
+		add di, 02d * (ScreenWidth - 04d)
+		
+		cmp cx, 00h
+		ja __loop
+		
+		ret
+DrawRegisterBlock	endp
 
 ;--------------------------------------------------------------------
 ; Draws frame
 ;
 ; Entry: PtrBorderStyleArg - address of style string
 ;
-; Destr: ax, cx, bx, dx, di, si
+; Destr: ax, bx, cx, dx, di, si, es
 ;--------------------------------------------------------------------
 DrawFrame	proc
 		
@@ -260,14 +402,20 @@ DrawFrameRow	endp
 ; Convert hexidecimal number to alpha
 ;
 ; Entry:
-;		 ax - source number
-;		 di - string destination
+;		 1 arg - source number
+;		 di    - string destination
 ;
-; Destr: ax, bx, cl
+; Destr:
 ;--------------------------------------------------------------------
 VideoItoaHex			proc
+		push bp
+		mov bp, sp
+		push ax bx cx di 
+		
+		mov ax, [bp + 04h]
 		mov cx, 05d
 		add di, 10d
+		
 __loop:
 		mov bx, ax
 		and bx, 000Fh
@@ -286,21 +434,50 @@ __loop:
 		mov byte ptr es:[di - 02h], '0'
 		mov byte ptr es:[di], 'x'
 		
-		ret
+		pop di cx bx ax
+		pop bp
+		ret 2 * 1
 VideoItoaHex			endp
 
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
+
+FrameEnabled		db 00h
+
+Old_Int08			dd 00h
 		
 TwoBordFrameStyle	db 0c9h, 0cdh, 0bbh
 					db 0bah, ' ',  0bah ; 0b0h
 					db 0c8h, 0cdh, 0bch
 					
+SeparatorFrameStyle db 0c7h, 0c4h, 0b6h
+					
 HexConvert	db '0123456789ABCDEF'
-RegAx		db 'ax = '
-RegBx		db 'bx = '
+
+Regs1Count  = 4
+Regs1		db 'ax'
+			db 'bx'
+			db 'cx'
+			db 'dx'
+			
+Regs2Count  = 2
+Regs2		db 'si'
+			db 'di'
+			
+Regs3Count  = 3
+Regs3		db 'bp'
+			db 'sp'
+			db 'ip'
+			
+Regs4Count  = 4
+Regs4		db 'ds'
+			db 'es'
+			db 'ss'
+			db 'cs'
+
+FrameVideoSeg		db 182 dup(0)
 
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
@@ -324,14 +501,14 @@ VideoSeg			= 0B800h
 ;--------------------------------------------------------------------
 
 x0				    = 62d			; Frame left top corner x
-y0				    = 3d			; Frame left top corner y
+y0				    = 1d			; Frame left top corner y
 
 ; !!! Little endian
 FrameWidth			= 13d			; Frame width  with borders
-FrameHeight		    = 14d			; Frame height with borders
+FrameHeight		    = 18d			; Frame height with borders
 FramePadding		= 2d 
 
-HotKey				= 03Ch
+HotKey				= 03Ch			; 'F2'
 
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------

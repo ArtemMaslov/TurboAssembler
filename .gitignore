@@ -40,3 +40,5 @@
 *.obj
 *.com
 *.lst
+*.map
+*.MAP
