@@ -9,7 +9,7 @@ org 100h
 ; Main
 ;--------------------------------------------------------------------
 start:
-
+		
 		call Set_Int09
 		call Set_Int08
 		
@@ -96,7 +96,7 @@ Set_Int08			proc
 Set_Int08			endp
 
 ;--------------------------------------------------------------------
-; Int 09 handler
+; Int 09 handler (keyboard)
 ;
 ; Destr: null
 ;--------------------------------------------------------------------
@@ -110,7 +110,8 @@ Override_Int09		proc
 		mov ah, AttrBackground
 		
 		in al, 60h	; read key
-		mov es:[di], ax
+		
+		; mov es:[di], ax
 		
 		cmp al, HotKeyVisibility
 		je __visibility
@@ -125,11 +126,32 @@ Override_Int09		proc
 Old_Int09:
 		dd 00
 		
-__visibility:			
+__visibility:
 		; Change frame visibility
 		mov al, byte ptr cs:[FrameEnabled]
 		not al
 		mov byte ptr cs:[FrameEnabled], al
+		
+		cmp al, 00h
+		je __disable_frame
+		
+		; Enable frame
+		push cx si dx
+		
+		call SaveVideoSeg
+		
+		pop dx si cx
+		
+		jmp __exit
+		
+__disable_frame:
+		; Disable frame
+		push si cx dx
+		
+		mov si, offset FrameOldVideo
+		call DrawVideoSeg
+		
+		pop dx cx si
 		
 		jmp __exit
 		
@@ -159,7 +181,7 @@ __exit:
 Override_Int09		endp
 
 ;--------------------------------------------------------------------
-; Int 08 handler
+; Int 08 handler (timer)
 ;
 ; Destr: null
 ;--------------------------------------------------------------------
@@ -173,32 +195,147 @@ Override_Int08		proc
 		cmp byte ptr cs:[FrameEnabled], 00h
 		ja __enable_frame
 		
-		; Disable frame
-		
 		iret
 		
 __enable_frame:
 		
 		push es si di dx cx bx ax
 		
-		call DrawFrame
+		call SaveDeltas
+		
+		mov ax, cs
+		mov es, ax
 		
 		cmp byte ptr cs:[RegistersEnabled], 00h
 		je __break
-		
+				
+		call DrawFrame
 		call DrawRegisters
 		
 __break:
+		
+		mov si, offset FrameVideoSeg
+		call DrawVideoSeg
+		
 		pop ax bx cx dx di si es
 		
 		iret
 Override_Int08		endp
 
 ;--------------------------------------------------------------------
+; Saves frame's screen part (video-memory) to FrameOldVideo
+;
+; Destr: es, ax, cx, si, di, dx
+;--------------------------------------------------------------------
+SaveVideoSeg		proc
+		mov ax, VideoSeg
+		mov es, ax
+		
+		mov dx, FrameHeight
+		mov di, offset FrameOldVideo
+		mov si, 02d * ((y0 * ScreenWidth) + x0)
+		
+__loop1:
+		mov cx, FrameWidth
+__loop2:
+		mov ax, word ptr es:[si]
+		add si, 02h
+		
+		mov word ptr cs:[di], ax
+		add di, 02h
+		
+		dec cx
+		ja __loop2
+		
+		add si, 02d * (ScreenWidth - FrameWidth)
+		
+		dec dx
+		cmp dx, 00h
+		ja __loop1
+				
+		ret
+SaveVideoSeg		endp
+
+;--------------------------------------------------------------------
+; Saves external vide memory changes
+;
+; Destr: ax, es, dx, di, si, cx
+;--------------------------------------------------------------------
+SaveDeltas			proc
+		mov ax, VideoSeg
+		mov es, ax
+		
+		mov dx, FrameHeight
+		mov di, offset FrameVideoSeg
+		mov si, 02d * ((y0 * ScreenWidth) + x0)
+		
+__loop1:
+		mov cx, FrameWidth
+__loop2:
+		mov ax, word ptr es:[si]
+		add si, 02h
+		
+		cmp ax, word ptr cs:[di]
+		je __continue
+		
+		mov word ptr cs:[di + FrameVideoMemorySize], ax
+		
+__continue:
+		add di, 02h
+		dec cx
+		
+		ja __loop2
+		
+		add si, 02d * (ScreenWidth - FrameWidth)
+		
+		dec dx
+		cmp dx, 00h
+		ja __loop1
+				
+		ret
+SaveDeltas			endp
+
+;--------------------------------------------------------------------
+; Draws FrameVideoSeg to screen (video-memory)
+;
+; Entry: si - video array
+;
+; Destr: es, ax, di, si, cx, dx
+;--------------------------------------------------------------------
+DrawVideoSeg		proc
+		
+		mov ax, VideoSeg
+		mov es, ax
+		
+		mov dx, FrameHeight
+		; mov si, offset FrameVideoSeg
+		mov di, 02d * ((y0 * ScreenWidth) + x0)
+		
+__loop1:
+		mov cx, FrameWidth
+__loop2:
+		mov ax, word ptr cs:[si]
+		add si, 02h
+		
+		stosw
+		
+		dec cx
+		ja __loop2
+		
+		add di, 02d * (ScreenWidth - FrameWidth)
+		
+		dec dx
+		cmp dx, 00h
+		ja __loop1
+		
+		ret
+DrawVideoSeg		endp
+
+;--------------------------------------------------------------------
 ; Draws registers into frame
 ;
 ; Entry:
-;		 es - Video segment
+;		 es - code segment
 ;
 ; Destr: ax, bx, cx, dx, si, di
 ;--------------------------------------------------------------------
@@ -209,21 +346,21 @@ DrawRegisters		proc
 		
 		mov ah, AttrBackground
 		mov si, offset Regs1
-		mov di, 02d * ((y0 + 01d) * ScreenWidth + x0 + FramePadding)
+		mov di, 02d * (01d * FrameWidth + FramePadding) + offset FrameVideoSeg
 		
 		; <Draw Registers
 		mov cx, Regs1Count
 		call DrawRegisterBlock
 				
-		add di, 02d * ScreenWidth
+		add di, 02d * FrameWidth
 		mov cx, Regs2Count
 		call DrawRegisterBlock
 		
-		add di, 02d * ScreenWidth
+		add di, 02d * FrameWidth
 		mov cx, Regs3Count
 		call DrawRegisterBlock
 		
-		add di, 02d * ScreenWidth
+		add di, 02d * FrameWidth
 		mov cx, Regs4Count
 		call DrawRegisterBlock
 		; Draw Registers/>
@@ -231,15 +368,15 @@ DrawRegisters		proc
 		; <Draw separators
 		mov si, offset SeparatorFrameStyle
 		
-		mov di, 02d * ((y0 + 01d + Regs1Count) * ScreenWidth + x0)
+		mov di, 02d * ((01d + Regs1Count) * FrameWidth) + offset FrameVideoSeg
 		mov cx, FrameWidth
 		call DrawFrameRow
 		
-		mov di, 02d * ((y0 + 01d + Regs1Count + 01d + Regs2Count) * ScreenWidth + x0)
+		mov di, 02d * ((01d + Regs1Count + 01d + Regs2Count) * FrameWidth) + offset FrameVideoSeg
 		mov cx, FrameWidth
 		call DrawFrameRow
 		
-		mov di, 02d * ((y0 + 01d + Regs1Count + 01d + Regs2Count + 01d + Regs3Count) * ScreenWidth + x0)
+		mov di, 02d * ((01d + Regs1Count + 01d + Regs2Count + 01d + Regs3Count) * FrameWidth) + offset FrameVideoSeg
 		mov cx, FrameWidth
 		call DrawFrameRow
 		; Draw separators/>
@@ -278,16 +415,17 @@ __loop:
 		stosw
 		; Print '<reg> =', where <reg> = ax, bx, cx, ...	
 		
+		push ax cx di
 		add di, 02h
 		push [bp]
 		
 		call VideoItoaHex
 		
 		add bp, 02
-		sub di, 02h
+		pop di cx ax
 		
 		dec cx
-		add di, 02d * (ScreenWidth - 04d)
+		add di, 02d * (FrameWidth - 04d)
 		
 		cmp cx, 00h
 		ja __loop
@@ -298,23 +436,17 @@ DrawRegisterBlock	endp
 ;--------------------------------------------------------------------
 ; Draws frame
 ;
-; Entry: PtrBorderStyleArg - address of style string
+; Entry:
+;		 es - code segment
 ;
 ; Destr: ax, bx, cx, dx, di, si, es
 ;--------------------------------------------------------------------
 DrawFrame	proc
-		
-		; Init Frame
-		mov ax, VideoSeg
-		mov es, ax
-				
 		; Set attribute
-		mov dx, 02h * (y0 * ScreenWidth)
-		add dx, word ptr 02h * x0
+		mov di, offset FrameVideoSeg
 		mov ah, AttrBackground
 		
 		; Draw top line
-		mov di, dx
 		mov cx, word ptr FrameWidth
 		mov si, offset TwoBordFrameStyle
 		
@@ -325,8 +457,8 @@ DrawFrame	proc
 		add si, 03h
 		
 __loop:
-		add dx, 02h * ScreenWidth
-		mov di, dx
+		;add dx, 02h * FrameWidth
+		;mov di, dx
 		mov cx, word ptr FrameWidth
 		
 		call DrawFrameRow
@@ -336,9 +468,9 @@ __loop:
 		ja __loop
 		
 		; Draw bottom line
-		add dx, 02h * ScreenWidth
+		;add dx, 02h * FrameWidth
 		add si, 03h
-		mov di, dx
+		;mov di, dx
 		mov cx, word ptr FrameWidth
 		
 		call DrawFrameRow
@@ -389,23 +521,22 @@ DrawText	endp
 DrawFrameRow	proc
 		
 		mov al, byte ptr cs:[si]
-		mov es:[di], ax
+		stosw
 		
-		add di, 02h
 		inc si
-		
 		mov al, byte ptr cs:[si]
+		sub cx, 02d
 		
 __loop:
-		mov es:[di], ax
-		add di, 02h
+		stosw
 		dec cx
 		
 		ja __loop
 		
 		inc si
 		mov al, byte ptr cs:[si]
-		mov es:[di], ax
+		
+		stosw
 		
 		sub si, 02h
 		
@@ -424,12 +555,11 @@ DrawFrameRow	endp
 ;		 1 arg - source number
 ;		 di    - string destination
 ;
-; Destr:
+; Destr: ax, bx, cx, di
 ;--------------------------------------------------------------------
 VideoItoaHex			proc
 		push bp
 		mov bp, sp
-		push ax bx cx di 
 		
 		mov ax, [bp + 04h]
 		mov cx, 05d
@@ -453,13 +583,46 @@ __loop:
 		mov byte ptr es:[di - 02h], '0'
 		mov byte ptr es:[di], 'x'
 		
-		pop di cx bx ax
 		pop bp
 		ret 2 * 1
 VideoItoaHex			endp
 
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+
+ScreenWidth         = 80d
+ScreenHeight        = 25d
+
+SymHorLine			= 0CDh
+SymVerLine			= 0BAh
+SymTopLeftCorner	= 0C9h
+SymTopRightCorner	= 0BBh
+SymBotLeftCorner	= 0C8h
+SymBotRightCorner	= 0BCh
+SymSpace			= ' '
+
+AttrBackground      = 02Eh ; 0010 1110
+
+VideoSeg			= 0B800h
+
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+
+x0				    = 62d			; Frame left top corner x
+y0				    = 1d			; Frame left top corner y
+
+; !!! Little endian
+FrameWidth			= 15d			; Frame width  with borders
+FrameHeight		    = 18d			; Frame height with borders
+FramePadding		= 2d 
+
+HotKeyVisibility	= 03Ch			; 'F2' - change visibility of frame
+HotKeySleep			= 03Bh			; 'F1' - stops changing registers
+
+FrameVideoMemorySize = (FrameWidth * FrameHeight * 02d)
+
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
 
@@ -497,39 +660,9 @@ Regs4				db 'ds'
 					db 'ss'
 					db 'cs'
 
-FrameVideoSeg		db FrameWidth * FrameHeight * 2 dup(0)
+FrameVideoSeg		db FrameVideoMemorySize dup(0)
 
-;--------------------------------------------------------------------
-;--------------------------------------------------------------------
-
-ScreenWidth         = 80d
-ScreenHeight        = 25d
-
-SymHorLine			= 0CDh
-SymVerLine			= 0BAh
-SymTopLeftCorner	= 0C9h
-SymTopRightCorner	= 0BBh
-SymBotLeftCorner	= 0C8h
-SymBotRightCorner	= 0BCh
-SymSpace			= ' '
-
-AttrBackground      = 02Eh ; 0010 1110
-
-VideoSeg			= 0B800h
-
-;--------------------------------------------------------------------
-;--------------------------------------------------------------------
-
-x0				    = 62d			; Frame left top corner x
-y0				    = 1d			; Frame left top corner y
-
-; !!! Little endian
-FrameWidth			= 13d			; Frame width  with borders
-FrameHeight		    = 18d			; Frame height with borders
-FramePadding		= 2d 
-
-HotKeyVisibility	= 03Ch			; 'F2' - change visibility of frame
-HotKeySleep			= 03Bh			; 'F1' - stops changing registers
+FrameOldVideo		db FrameVideoMemorySize dup(0)
 
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
