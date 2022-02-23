@@ -112,8 +112,11 @@ Override_Int09		proc
 		in al, 60h	; read key
 		mov es:[di], ax
 		
-		cmp al, HotKey
-		je __hotkey
+		cmp al, HotKeyVisibility
+		je __visibility
+		
+		cmp al, HotKeySleep
+		je __sleep
 		
 		pop es di ax
 		
@@ -122,13 +125,21 @@ Override_Int09		proc
 Old_Int09:
 		dd 00
 		
-__hotkey:			
-		; Run my int handler
-		
+__visibility:			
+		; Change frame visibility
 		mov al, byte ptr cs:[FrameEnabled]
 		not al
 		mov byte ptr cs:[FrameEnabled], al
 		
+		jmp __exit
+		
+__sleep:
+		; Change registers displaying state
+		mov al, byte ptr cs:[RegistersEnabled]
+		not al
+		mov byte ptr cs:[RegistersEnabled], al
+		
+__exit:
 		; Set signal to keyboard controller
 		in al, 61h
 		mov ah, al
@@ -172,8 +183,12 @@ __enable_frame:
 		
 		call DrawFrame
 		
+		cmp byte ptr cs:[RegistersEnabled], 00h
+		je __break
+		
 		call DrawRegisters
 		
+__break:
 		pop ax bx cx dx di si es
 		
 		iret
@@ -263,9 +278,13 @@ __loop:
 		stosw
 		; Print '<reg> =', where <reg> = ax, bx, cx, ...	
 		
+		add di, 02h
 		push [bp]
+		
 		call VideoItoaHex
+		
 		add bp, 02
+		sub di, 02h
 		
 		dec cx
 		add di, 02d * (ScreenWidth - 04d)
@@ -445,6 +464,7 @@ VideoItoaHex			endp
 ;--------------------------------------------------------------------
 
 FrameEnabled		db 00h
+RegistersEnabled	db 0FFh
 
 Old_Int08			dd 00h
 		
@@ -454,30 +474,30 @@ TwoBordFrameStyle	db 0c9h, 0cdh, 0bbh
 					
 SeparatorFrameStyle db 0c7h, 0c4h, 0b6h
 					
-HexConvert	db '0123456789ABCDEF'
+HexConvert			db '0123456789ABCDEF'
+		
+Regs1Count  		= 4
+Regs1				db 'ax'
+					db 'bx'
+					db 'cx'
+					db 'dx'
+					
+Regs2Count  		= 2
+Regs2				db 'si'
+					db 'di'
+					
+Regs3Count  		= 3
+Regs3				db 'bp'
+					db 'sp'
+					db 'ip'
+					
+Regs4Count  		= 4
+Regs4				db 'ds'
+					db 'es'
+					db 'ss'
+					db 'cs'
 
-Regs1Count  = 4
-Regs1		db 'ax'
-			db 'bx'
-			db 'cx'
-			db 'dx'
-			
-Regs2Count  = 2
-Regs2		db 'si'
-			db 'di'
-			
-Regs3Count  = 3
-Regs3		db 'bp'
-			db 'sp'
-			db 'ip'
-			
-Regs4Count  = 4
-Regs4		db 'ds'
-			db 'es'
-			db 'ss'
-			db 'cs'
-
-FrameVideoSeg		db 182 dup(0)
+FrameVideoSeg		db FrameWidth * FrameHeight * 2 dup(0)
 
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
@@ -508,7 +528,8 @@ FrameWidth			= 13d			; Frame width  with borders
 FrameHeight		    = 18d			; Frame height with borders
 FramePadding		= 2d 
 
-HotKey				= 03Ch			; 'F2'
+HotKeyVisibility	= 03Ch			; 'F2' - change visibility of frame
+HotKeySleep			= 03Bh			; 'F1' - stops changing registers
 
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
