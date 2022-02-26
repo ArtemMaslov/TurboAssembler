@@ -1212,7 +1212,7 @@ StrChrTestCount = 11d
 StrChrInputChars:
 			db '1',  00h
 			db '2',  00h
-			db '6',  00h
+			db '5',  00h
 			db '9',  00h
 			db '0',  00h
 			db 'a',  00h
@@ -1224,14 +1224,14 @@ StrChrInputChars:
 			
 StrChrRes	dd '0'
 			dd '1'
-			dd '5'
+			dd '7'
 			dd '8'
 			dd '9'
 			dd '0'
 			dd '4'
 			dd '3'
-			dd '31' ; 13 little endian
-			dd '42' ; 24 
+			dd '13'
+			dd '24'
 			dd '6'
 
 StrCount	= 06h
