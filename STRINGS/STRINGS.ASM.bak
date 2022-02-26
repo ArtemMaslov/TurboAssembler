@@ -54,7 +54,7 @@ org 100h
 ;--------------------------------------------------------------------
 start:
 	
-	call StrChrUnitTests
+	call StrCmpUnitTests
 	
 	; exit (0);
 	mov ax, 4c00h
@@ -69,7 +69,7 @@ start:
 ;
 ; Destr: bx
 ;--------------------------------------------------------------------
-StrLen			proc
+StrLen proc
 		
 		mov bx, 00h
 		
@@ -81,7 +81,7 @@ __loop:
 		jne __loop
 				
 		ret
-StrLen			endp
+StrLen endp
 
 ;--------------------------------------------------------------------
 ; Find symbol in the string
@@ -94,7 +94,7 @@ StrLen			endp
 ;
 ; Destr: bx
 ;--------------------------------------------------------------------
-StrChr			proc
+StrChr proc
 		
 		mov bx, si
 		
@@ -117,7 +117,7 @@ __loop:
 __sym_found:
 
 		ret
-StrChr			endp
+StrChr endp
 
 ;--------------------------------------------------------------------
 ; Copy si to di. si - '\0'-terminated string.
@@ -130,7 +130,7 @@ StrChr			endp
 ;
 ; Destr: bx, al
 ;--------------------------------------------------------------------
-StrCpy			proc
+StrCpy proc
 		
 		mov bx, 00h
 		mov al, 00h
@@ -148,7 +148,7 @@ __loop:
 		inc bx
 		
 		ret
-StrCpy			endp
+StrCpy endp
 
 ;--------------------------------------------------------------------
 ; Copy n symbols from si to di. si - '\0'-terminated string.
@@ -162,7 +162,7 @@ StrCpy			endp
 ;
 ; Destr: bx, al
 ;--------------------------------------------------------------------
-StrNCpy			proc
+StrNCpy proc
 		
 		mov bx, 00h
 		mov al, 00h
@@ -189,7 +189,7 @@ __loop:
 		
 __exit:
 		ret
-StrNCpy			endp
+StrNCpy endp
 
 ;--------------------------------------------------------------------
 ; Compares strings
@@ -204,7 +204,7 @@ StrNCpy			endp
 ;
 ; Destr: bx, al
 ;--------------------------------------------------------------------
-StrCmp			proc
+StrCmp proc
 		
 		mov al, 00h
 		mov bx, 00h
@@ -246,7 +246,7 @@ __equal:		; di == 0, si == 0 => si == di
 		mov al, 00h
 		
 		ret
-StrCmp			endp
+StrCmp endp
 
 ;--------------------------------------------------------------------
 ; Prints string to screen
@@ -288,7 +288,7 @@ PrintString endp
 ;
 ; Destr: ax, bx, cx, dx
 ;--------------------------------------------------------------------
-Atoi			proc
+Atoi proc
 		
 		mov dx, 00h
 		mov ax, 00h
@@ -320,7 +320,7 @@ __body:
 		
 __exit:
 		ret
-Atoi			endp
+Atoi endp
 
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
@@ -339,7 +339,7 @@ Atoi			endp
 ;
 ; Destr: ax, bx, cx, dx
 ;--------------------------------------------------------------------
-ItoaDec			proc
+ItoaDec proc
 		
 		push ax
 		mov bx, 00h
@@ -373,7 +373,7 @@ __loop:
 		ja __loop
 		
 		ret
-ItoaDec			endp
+ItoaDec endp
 
 ;--------------------------------------------------------------------
 ; Convert hexidecimal number to alpha
@@ -384,7 +384,7 @@ ItoaDec			endp
 ;
 ; Destr: ax, bx, cl
 ;--------------------------------------------------------------------
-ItoaHex			proc
+ItoaHex proc
 		push bp
 		mov bp, 05h ; number length
 		
@@ -408,7 +408,7 @@ __loop:
 		
 		pop bp
 		ret
-ItoaHex			endp
+ItoaHex endp
 
 ;--------------------------------------------------------------------
 ; Convert octal number to alpha
@@ -419,7 +419,7 @@ ItoaHex			endp
 ;
 ; Destr: ax, bx, dl
 ;--------------------------------------------------------------------
-ItoaOct			proc
+ItoaOct proc
 		mov bx, 08h ; number length
 		
 		mov byte ptr [si + bx + 01], 00h ; null-terminator
@@ -441,7 +441,7 @@ __loop:
 		mov word ptr [si + bx - 01h], 'q0'
 		
 		ret
-ItoaOct			endp
+ItoaOct endp
 
 ;--------------------------------------------------------------------
 ; Convert binary number to alpha
@@ -452,7 +452,7 @@ ItoaOct			endp
 ;
 ; Destr: ax, bx, cx, dx
 ;--------------------------------------------------------------------
-ItoaBin			proc
+ItoaBin proc
 		mov bx, 00h
 		mov cx, 8000h ; 0b10...0 (count ('0') == 15)
 		
@@ -482,7 +482,7 @@ __step: ; step
 		mov byte ptr [si + bx], 00h ; null-terminator
 		
 		ret
-ItoaBin			endp
+ItoaBin endp
 	
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
@@ -501,7 +501,7 @@ ItoaBin			endp
 ;
 ; Destr: bx
 ;--------------------------------------------------------------------
-Cdecl_StrLen		proc
+Cdecl_StrLen proc
 		push bp
 		mov bp, sp
 		
@@ -515,7 +515,7 @@ Cdecl_StrLen		proc
 		
 		pop bp
 		ret 2*1
-Cdecl_StrLen		endp
+Cdecl_StrLen endp
 
 ;--------------------------------------------------------------------
 ; Find symbol in the string
@@ -528,7 +528,7 @@ Cdecl_StrLen		endp
 ; Destr: bx
 ;--------------------------------------------------------------------
 	
-Cdecl_StrChr		proc
+Cdecl_StrChr proc
 		push bp
 		mov bp, sp
 		
@@ -543,7 +543,7 @@ Cdecl_StrChr		proc
 		
 		pop bp
 		ret 2*2
-Cdecl_StrChr		endp
+Cdecl_StrChr endp
 
 ;--------------------------------------------------------------------
 ; Find symbol in the string
@@ -556,7 +556,7 @@ Cdecl_StrChr		endp
 ; Destr: bx
 ;--------------------------------------------------------------------
 	
-Pascal_StrChr		proc
+Pascal_StrChr proc
 		push bp
 		mov bp, sp
 		
@@ -571,7 +571,7 @@ Pascal_StrChr		proc
 		
 		pop bp
 		ret 2*2
-Pascal_StrChr		endp
+Pascal_StrChr endp
 
 ;--------------------------------------------------------------------
 ; Copy source string to destination string. si - '\0'-terminated string.
@@ -583,7 +583,7 @@ Pascal_StrChr		endp
 ;
 ; Destr: bx
 ;--------------------------------------------------------------------
-Cdecl_StrCpy			proc
+Cdecl_StrCpy proc
 		push bp
 		mov bp, sp
 		
@@ -598,7 +598,7 @@ Cdecl_StrCpy			proc
 		
 		pop bp
 		ret 2*2
-Cdecl_StrCpy			endp
+Cdecl_StrCpy endp
 
 ;--------------------------------------------------------------------
 ; Copy si to di. si - '\0'-terminated string.
@@ -610,7 +610,7 @@ Cdecl_StrCpy			endp
 ;
 ; Destr: bx
 ;--------------------------------------------------------------------
-Pascal_StrCpy			proc
+Pascal_StrCpy proc
 		push bp
 		mov bp, sp
 		
@@ -625,7 +625,7 @@ Pascal_StrCpy			proc
 		
 		pop bp
 		ret 2*2
-Pascal_StrCpy			endp
+Pascal_StrCpy endp
 
 ;--------------------------------------------------------------------
 ; Copy n symbols from si to di. si - '\0'-terminated string.
@@ -638,7 +638,7 @@ Pascal_StrCpy			endp
 ;
 ; Destr: bx
 ;--------------------------------------------------------------------
-Cdecl_StrNCpy			proc
+Cdecl_StrNCpy proc
 		push bp
 		mov bp, sp
 		
@@ -654,7 +654,7 @@ Cdecl_StrNCpy			proc
 		
 		pop bp
 		ret 2*3
-Cdecl_StrNCpy			endp
+Cdecl_StrNCpy endp
 
 ;--------------------------------------------------------------------
 ; Copy n symbols from si to di. si - '\0'-terminated string.
@@ -667,7 +667,7 @@ Cdecl_StrNCpy			endp
 ;
 ; Destr: bx, al
 ;--------------------------------------------------------------------
-Pascal_StrNCpy			proc
+Pascal_StrNCpy proc
 		push bp
 		mov bp, sp
 		
@@ -683,7 +683,7 @@ Pascal_StrNCpy			proc
 		
 		pop bp
 		ret 2*3
-Pascal_StrNCpy			endp
+Pascal_StrNCpy endp
 
 ;--------------------------------------------------------------------
 ; Compares strings
@@ -697,7 +697,7 @@ Pascal_StrNCpy			endp
 ;
 ; Destr: al
 ;--------------------------------------------------------------------
-Cdecl_StrCmp			proc
+Cdecl_StrCmp proc
 		push bp
 		mov bp, sp
 		
@@ -712,7 +712,7 @@ Cdecl_StrCmp			proc
 		
 		pop bp
 		ret 2*2
-Cdecl_StrCmp			endp
+Cdecl_StrCmp endp
 
 ;--------------------------------------------------------------------
 ; Convert alpha to number
@@ -723,7 +723,7 @@ Cdecl_StrCmp			endp
 ;
 ; Destr: ax
 ;--------------------------------------------------------------------
-Cdecl_Atoi			proc
+Cdecl_Atoi proc
 		push bp
 		mov bp, sp
 		
@@ -737,7 +737,7 @@ Cdecl_Atoi			proc
 		
 		pop bp
 		ret 2*1
-Cdecl_Atoi			endp
+Cdecl_Atoi endp
 	
 ;--------------------------------------------------------------------
 ; Convert decimal number to alpha
@@ -747,7 +747,7 @@ Cdecl_Atoi			endp
 ;
 ; Destr: null
 ;--------------------------------------------------------------------
-Cdecl_ItoaDec			proc
+Cdecl_ItoaDec proc
 		push bp
 		mov bp, sp
 		
@@ -762,7 +762,7 @@ Cdecl_ItoaDec			proc
 		
 		pop bp
 		ret 2*2
-Cdecl_ItoaDec			endp
+Cdecl_ItoaDec endp
 	
 ;--------------------------------------------------------------------
 ; Convert hexidecimal number to alpha
@@ -772,7 +772,7 @@ Cdecl_ItoaDec			endp
 ;
 ; Destr: null
 ;--------------------------------------------------------------------
-Cdecl_ItoaHex			proc
+Cdecl_ItoaHex proc
 		push bp
 		mov bp, sp
 		
@@ -787,7 +787,7 @@ Cdecl_ItoaHex			proc
 		
 		pop bp
 		ret 2*2
-Cdecl_ItoaHex			endp
+Cdecl_ItoaHex endp
 
 ;--------------------------------------------------------------------
 ; Convert octal number to alpha
@@ -797,7 +797,7 @@ Cdecl_ItoaHex			endp
 ;
 ; Destr: null
 ;--------------------------------------------------------------------
-Cdecl_ItoaOct			proc
+Cdecl_ItoaOct proc
 		push bp
 		mov bp, sp
 		
@@ -812,7 +812,7 @@ Cdecl_ItoaOct			proc
 		
 		pop bp
 		ret 2*2
-Cdecl_ItoaOct			endp
+Cdecl_ItoaOct endp
 
 ;--------------------------------------------------------------------
 ; Convert binary number to alpha
@@ -822,7 +822,7 @@ Cdecl_ItoaOct			endp
 ;
 ; Destr: null
 ;--------------------------------------------------------------------
-Cdecl_ItoaBin			proc
+Cdecl_ItoaBin proc
 		push bp
 		mov bp, sp
 		
@@ -837,7 +837,7 @@ Cdecl_ItoaBin			proc
 		
 		pop bp
 		ret 2*2
-Cdecl_ItoaBin			endp
+Cdecl_ItoaBin endp
 
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
@@ -852,7 +852,7 @@ Cdecl_ItoaBin			endp
 ;
 ; Destr: cx, bp, si, bx
 ;--------------------------------------------------------------------
-StrLenUnitTests	proc
+StrLenUnitTests proc
 		
 		mov bp, 00h
 		
@@ -907,7 +907,7 @@ StrChrUnitTests	proc
 __loop:
 		.TestInput
 		; puts input str
-		mov si, word ptr [StrChrInputStrPtrs + bp]
+		mov si, word ptr [StrChrInputStrings + bp]
 		call PrintString
 		
 		.TestSep
@@ -918,7 +918,7 @@ __loop:
 		
 		.NewLine
 		
-		mov si, word ptr [StrChrInputStrPtrs + bp]
+		mov si, word ptr [StrChrInputStrings + bp]
 		mov al, byte ptr [StrChrInputChars + bp]
 		
 		call StrChr
@@ -963,21 +963,34 @@ StrChrUnitTests endp
 ;--------------------------------------------------------------------
 StrCpyUnitTests	proc
 		
-		mov cx, 00h
 		mov bp, 00h
 		
+		.TestStart
+		.NewLine
+
 		mov di, offset Array
-		
 __loop:
+		.TestInput
+		; puts input str
 		mov si, word ptr [offset StrPtrs + bp]
+		call PrintString
+		
+		.NewLine
+		
+		mov al, byte ptr [StrChrInputChars + bp]
 		
 		call StrCpy
-		add di, bx
-		add bp, 02h
 		
-		inc cx
+		mov si, di
+		; puts result
+		call PrintString
+				
+		.NewLine
 		
-		cmp cx, StrCount
+		; step
+		add bp, 02
+		
+		cmp bp, 02d * StrCpyTestCount
 		jb __loop
 		
 		ret
@@ -990,44 +1003,50 @@ StrCpyUnitTests endp
 ;--------------------------------------------------------------------
 StrNCpyUnitTests	proc
 		
-		mov bx, 00h
 		
-		mov si, offset Str1
+		mov bp, 00h
+		
+		.TestStart
+		.NewLine
+
 		mov di, offset Array
-		mov cx, 00h
+__loop:
+		.TestInput
+		; puts input str
+		mov si, word ptr [StrNCpyInputStrings + bp]
+		call PrintString
+		
+		.TestSep
+		; puts input string length
+		mov si, offset Array
+		mov ax, word ptr [StrNCpyInputLength + bp]
+		call ItoaDec
+		; puts result
+		call PrintString
+		
+		.NewLine
+		
+		mov si, word ptr [StrNCpyInputStrings + bp]
+		mov cx, word ptr [StrNCpyInputLength + bp]
 		
 		call StrNCpy
+		push bx
 		
-		mov cx, 1d
-		call StrNCpy
+		mov si, di
+		; puts result
+		call PrintString
+				
+		.NewLine
 		
-		mov cx, 5d
-		call StrNCpy
+		.getch
 		
-		mov cx, 10d
-		call StrNCpy
+		; step
+		add bp, 02
+		pop bx
+		add di, bx
 		
-		mov cx, 20d
-		call StrNCpy
-		
-		mov si, offset Str3
-		
-		mov cx, 0d
-		call StrNCpy
-		
-		mov cx, 1d
-		call StrNCpy
-		
-		mov cx, 5d
-		call StrNCpy
-		
-		mov si, offset Str6
-		
-		mov cx, 5d
-		call StrNCpy
-		
-		mov cx, 8d
-		call StrNCpy		
+		cmp bp, 02d * StrNCpyTestCount
+		jb __loop
 		
 		ret
 StrNCpyUnitTests endp
@@ -1038,6 +1057,56 @@ StrNCpyUnitTests endp
 ; Destr: si, bx, al, di
 ;--------------------------------------------------------------------
 StrCmpUnitTests	proc
+		
+		mov bp, 00h
+		
+		.TestStart
+		.NewLine
+
+		mov di, offset Array
+__loop:
+		.TestInput
+		.NewLine
+		
+		; puts input str1
+		mov si, word ptr [StrCmpInputStr1 + bp]
+		call PrintString
+		
+		.NewLine
+		
+		; puts input str2
+		mov si, word ptr [StrCmpInputStr2 + bp]
+		call PrintString
+		
+		.NewLine
+		
+		mov si, word ptr [StrCmpInputStr1 + bp]
+		mov di, word ptr [StrCmpInputStr2 + bp]
+		
+		call StrCmp
+		
+		; puts result
+		mov dl, al
+		add dl, '0'
+		mov ah, 02h
+		int 21h
+		
+		; print right answer
+		.TestSep
+		
+		mov dl, byte ptr [StrCmpRes + bp]
+		mov ah, 02h
+		int 21h
+		
+		.NewLine
+		
+		; step
+		add bp, 02
+		
+		cmp bp, 02d * StrCpyTestCount
+		jb __loop
+		
+		ret
 		
 		mov si, offset Str1
 		mov di, offset Str2
@@ -1193,8 +1262,9 @@ StrLenPtrs  dw StrLenRes1
 			dw StrLenRes6
 			
 StrLenTestCount = 6
+StrCpyTestCount = 6
 			
-StrChrInputStrPtrs:
+StrChrInputStrings:
 			dw Str1
 			dw Str1
 			dw Str1
@@ -1212,7 +1282,7 @@ StrChrTestCount = 11d
 StrChrInputChars:
 			db '1',  00h
 			db '2',  00h
-			db '5',  00h
+			db '6',  00h
 			db '9',  00h
 			db '0',  00h
 			db 'a',  00h
@@ -1224,15 +1294,75 @@ StrChrInputChars:
 			
 StrChrRes	dd '0'
 			dd '1'
-			dd '7'
+			dd '5'
 			dd '8'
 			dd '9'
 			dd '0'
 			dd '4'
 			dd '3'
-			dd '13'
-			dd '24'
+			dd '31' ; 13 little endian
+			dd '42' ; 24 
 			dd '6'
+	
+StrNCpyTestCount = 10d
+
+StrNCpyInputStrings:
+			dw Str1
+			dw Str1
+			dw Str1
+			dw Str1
+			dw Str1
+			dw Str3
+			dw Str3
+			dw Str3
+			dw Str6
+			dw Str6
+			
+StrNCpyInputLength:
+			dw 00d
+			dw 01d
+			dw 05d
+			dw 10d
+			dw 20d
+			dw 00d
+			dw 01d
+			dw 05d
+			dw 05d
+			dw 08d
+			
+StrCmpTestCount = 9
+
+StrCmpInputStr1:
+			dw Str1
+			dw Str2
+			dw StrCmp1
+			dw StrCmp1
+			dw Str6
+			dw Str3
+			dw Str2
+			dw Str1
+			dw Str5
+			
+StrCmpInputStr2:
+			dw Str2
+			dw Str1
+			dw StrCmp2
+			dw StrCmp3
+			dw StrCmp4
+			dw Str3
+			dw Str2
+			dw Str5
+			dw Str1
+			
+StrCmpRes	db '2', 00h
+			db '1', 00h
+			db '2', 00h
+			db '2', 00h
+			db '1', 00h
+			db '0', 00h
+			db '0', 00h
+			db '2', 00h
+			db '1', 00h
 
 StrCount	= 06h
 				
