@@ -10,8 +10,8 @@ org 100h
 ;--------------------------------------------------------------------
 start:
 		
-		call Set_KeyboardInterrupt
-		call Set_TimerInterrupt
+		call Set_Int09
+		call Set_Int08
 		
 		; call DrawFrame
 		
@@ -48,11 +48,11 @@ __extra_parag:
 ;
 ; Destr: ax, bx, dx, es
 ;--------------------------------------------------------------------
-Set_KeyboardInterrupt proc
+Set_Int09			proc
 		
 		xor bx, bx
 		mov es, bx
-		mov bx, 9 * 4 ; address of interupt 9
+		mov bx, 9 * 4
 		mov ax, cs
 		
 		cli
@@ -65,20 +65,20 @@ Set_KeyboardInterrupt proc
 		mov word ptr [offset Old_Int09 + 02h], dx
 		
 		; Write new int handler
-		mov word ptr es:[bx]      , offset Override_KeyboardInterrupt
+		mov word ptr es:[bx]      , offset Override_Int09
 		mov word ptr es:[bx + 02h], ax
 		
 		sti
 		
 		ret
-Set_KeyboardInterrupt endp
+Set_Int09			endp
 
 ;--------------------------------------------------------------------
 ; Overrides 08h interrupt (timer)
 ;
 ; Destr: ax, bx, dx, es
 ;--------------------------------------------------------------------
-Set_TimerInterrupt proc
+Set_Int08			proc
 		
 		; Save old handler
 		mov ax, 3508h
@@ -89,18 +89,18 @@ Set_TimerInterrupt proc
 		
 		; Set new handler
 		mov ax, 2508h
-		mov dx, offset Override_TimerInterrupt
+		mov dx, offset Override_Int08
 		int 21h
 		
 		ret
-Set_TimerInterrupt endp
+Set_Int08			endp
 
 ;--------------------------------------------------------------------
 ; Int 09 handler (keyboard)
 ;
 ; Destr: null
 ;--------------------------------------------------------------------
-Override_KeyboardInterrupt proc
+Override_Int09		proc
 		push ax di es
 		
 		mov ax, VideoSeg
@@ -178,14 +178,14 @@ __exit:
 		
 		pop es di ax
 		iret
-Override_KeyboardInterrupt endp
+Override_Int09		endp
 
 ;--------------------------------------------------------------------
 ; Int 08 handler (timer)
 ;
 ; Destr: null
 ;--------------------------------------------------------------------
-Override_TimerInterrupt proc
+Override_Int08		proc
 
 		; Run old int handler
 		pushf ; Simulate interrupt
@@ -220,14 +220,14 @@ __break:
 		pop ax bx cx dx di si es
 		
 		iret
-Override_TimerInterrupt endp
+Override_Int08		endp
 
 ;--------------------------------------------------------------------
 ; Saves frame's screen part (video-memory) to FrameOldVideo
 ;
 ; Destr: es, ax, cx, si, di, dx
 ;--------------------------------------------------------------------
-SaveVideoSeg proc
+SaveVideoSeg		proc
 		mov ax, VideoSeg
 		mov es, ax
 		
@@ -254,14 +254,14 @@ __loop2:
 		ja __loop1
 				
 		ret
-SaveVideoSeg endp
+SaveVideoSeg		endp
 
 ;--------------------------------------------------------------------
 ; Saves external vide memory changes
 ;
 ; Destr: ax, es, dx, di, si, cx
 ;--------------------------------------------------------------------
-SaveDeltas proc
+SaveDeltas			proc
 		mov ax, VideoSeg
 		mov es, ax
 		
@@ -293,7 +293,7 @@ __continue:
 		ja __loop1
 				
 		ret
-SaveDeltas endp
+SaveDeltas			endp
 
 ;--------------------------------------------------------------------
 ; Draws FrameVideoSeg to screen (video-memory)
@@ -302,7 +302,7 @@ SaveDeltas endp
 ;
 ; Destr: es, ax, di, si, cx, dx
 ;--------------------------------------------------------------------
-DrawVideoSeg proc
+DrawVideoSeg		proc
 		
 		mov ax, VideoSeg
 		mov es, ax
@@ -329,7 +329,7 @@ __loop2:
 		ja __loop1
 		
 		ret
-DrawVideoSeg endp
+DrawVideoSeg		endp
 
 ;--------------------------------------------------------------------
 ; Draws registers into frame
@@ -339,7 +339,7 @@ DrawVideoSeg endp
 ;
 ; Destr: ax, bx, cx, dx, si, di
 ;--------------------------------------------------------------------
-DrawRegisters proc
+DrawRegisters		proc
 		push bp
 		mov bp, sp
 		add bp, 04h
@@ -383,7 +383,7 @@ DrawRegisters proc
 		
 		pop bp
 		ret
-DrawRegisters endp
+DrawRegisters		endp
 
 ;--------------------------------------------------------------------
 ; Draws registers block into frame
@@ -396,7 +396,7 @@ DrawRegisters endp
 ;
 ; Destr: al, bx, cx, dx, si, di
 ;--------------------------------------------------------------------
-DrawRegisterBlock proc
+DrawRegisterBlock	proc
 		
 __loop:
 		; Print '<reg> =', where <reg> = ax, bx, cx, ...
@@ -431,7 +431,7 @@ __loop:
 		ja __loop
 		
 		ret
-DrawRegisterBlock endp
+DrawRegisterBlock	endp
 
 ;--------------------------------------------------------------------
 ; Draws frame
@@ -441,7 +441,7 @@ DrawRegisterBlock endp
 ;
 ; Destr: ax, bx, cx, dx, di, si, es
 ;--------------------------------------------------------------------
-DrawFrame proc
+DrawFrame	proc
 		; Set attribute
 		mov di, offset FrameVideoSeg
 		mov ah, AttrBackground
@@ -477,7 +477,7 @@ __loop:
 				
 __exit:
 		ret
-DrawFrame endp
+DrawFrame	endp
 
 ;--------------------------------------------------------------------
 ; Draws text
@@ -491,7 +491,7 @@ DrawFrame endp
 ;
 ; Destr: al, cx, si, di
 ;--------------------------------------------------------------------
-DrawText proc
+DrawText	proc
 
 __loop:
 		mov al, byte ptr cs:[si]
@@ -504,7 +504,7 @@ __loop:
 		ja __loop
 		
 		ret
-DrawText endp
+DrawText	endp
 		
 ;--------------------------------------------------------------------
 ; Draws horizontal line
@@ -518,7 +518,7 @@ DrawText endp
 ;
 ; Destr: al, cx, di, not si, 
 ;--------------------------------------------------------------------
-DrawFrameRow proc
+DrawFrameRow	proc
 		
 		mov al, byte ptr cs:[si]
 		stosw
@@ -541,7 +541,7 @@ __loop:
 		sub si, 02h
 		
 		ret
-DrawFrameRow endp
+DrawFrameRow	endp
 
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
@@ -557,7 +557,7 @@ DrawFrameRow endp
 ;
 ; Destr: ax, bx, cx, di
 ;--------------------------------------------------------------------
-VideoItoaHex proc
+VideoItoaHex			proc
 		push bp
 		mov bp, sp
 		
@@ -585,7 +585,7 @@ __loop:
 		
 		pop bp
 		ret 2 * 1
-VideoItoaHex endp
+VideoItoaHex			endp
 
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------

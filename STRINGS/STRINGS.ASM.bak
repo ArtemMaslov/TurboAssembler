@@ -293,6 +293,8 @@ Atoi			endp
 ;		 ax - source number
 ;		 si - string destination
 ;
+; Out:   si - address of converted number
+;
 ; Destr: ax, bx, cx, dx
 ;--------------------------------------------------------------------
 ItoaDec			proc
@@ -338,7 +340,7 @@ ItoaDec			endp
 ;		 ax - source number
 ;		 si - string destination
 ;
-; Destr: ax, bx, cl
+; Destr: ax, bx, cl, bp
 ;--------------------------------------------------------------------
 ItoaHex			proc
 		push bp
@@ -651,20 +653,16 @@ Pascal_StrNCpy			endp
 ;		 al == 1 if si >  di
 ;		 al == 2 if si <  di
 ;
-; Destr: al
+; Destr: bx, al
 ;--------------------------------------------------------------------
 Cdecl_StrCmp			proc
 		push bp
 		mov bp, sp
 		
-		push bx si di
-		
 		mov si, word ptr [bp + 04h]
 		mov di, word ptr [bp + 06h]
 		
 		call StrCmp
-		
-		pop di si bx
 		
 		pop bp
 		ret 2*2
@@ -677,19 +675,15 @@ Cdecl_StrCmp			endp
 ;
 ; Out:	 ax - out number
 ;
-; Destr: ax
+; Destr: ax, bx, cx, dx
 ;--------------------------------------------------------------------
 Cdecl_Atoi			proc
 		push bp
 		mov bp, sp
 		
-		push bx cx dx si
-		
 		mov si, word ptr [bp + 04h]
 		
 		call Atoi
-		
-		pop si dx cx bx
 		
 		pop bp
 		ret 2*1
@@ -701,20 +695,16 @@ Cdecl_Atoi			endp
 ; Entry: 1 arg - source number
 ;		 2 arg - string destination
 ;
-; Destr: null
+; Destr: ax, bx, cx, dx
 ;--------------------------------------------------------------------
 Cdecl_ItoaDec			proc
 		push bp
 		mov bp, sp
 		
-		push ax bx cx dx si
-		
 		mov ax, word ptr [bp + 04h]
 		mov si, word ptr [bp + 06h]
 		
 		call ItoaDec
-		
-		pop si dx cx bx ax
 		
 		pop bp
 		ret 2*2
@@ -726,20 +716,16 @@ Cdecl_ItoaDec			endp
 ; Entry: 1 arg - source number
 ;		 2 arg - string destination
 ;
-; Destr: null
+; Destr: ax, bx, cl, bp
 ;--------------------------------------------------------------------
 Cdecl_ItoaHex			proc
 		push bp
 		mov bp, sp
 		
-		push ax bx cx si
-		
 		mov ax, word ptr [bp + 04h]
 		mov si, word ptr [bp + 06h]
 		
 		call ItoaHex
-		
-		pop si cx bx ax
 		
 		pop bp
 		ret 2*2
@@ -751,20 +737,16 @@ Cdecl_ItoaHex			endp
 ; Entry: 1 arg - source number
 ;		 2 arg - string destination
 ;
-; Destr: null
+; Destr: ax, bx, dl
 ;--------------------------------------------------------------------
 Cdecl_ItoaOct			proc
 		push bp
 		mov bp, sp
 		
-		push ax bx dx si
-		
 		mov ax, word ptr [bp + 04h]
 		mov si, word ptr [bp + 06h]
 		
 		call ItoaOct
-		
-		pop si dx bx ax
 		
 		pop bp
 		ret 2*2
@@ -776,20 +758,16 @@ Cdecl_ItoaOct			endp
 ; Entry: 1 arg - source number
 ;		 2 arg - string destination
 ;
-; Destr: null
+; Destr: ax, bx, cx, dx
 ;--------------------------------------------------------------------
 Cdecl_ItoaBin			proc
 		push bp
 		mov bp, sp
 		
-		push ax bx cx dx si
-		
 		mov ax, word ptr [bp + 04h]
 		mov si, word ptr [bp + 06h]
 		
 		call ItoaBin
-		
-		pop si dx cx bx ax
 		
 		pop bp
 		ret 2*2
