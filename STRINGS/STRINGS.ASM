@@ -18,8 +18,17 @@ org 100h
 		
 .TestInput macro
 		nop
-		; puts ("Input");
+		; puts ("Input:");
 		mov si, offset StrInput
+		call PrintString
+		
+		nop
+		endm
+		
+.TestResult macro
+		nop
+		; puts ("Result:");
+		mov si, offset StrResult
 		call PrintString
 		
 		nop
@@ -54,7 +63,7 @@ org 100h
 ;--------------------------------------------------------------------
 start:
 	
-	call StrCmpUnitTests
+	call ItoaUnitTests
 	
 	; exit (0);
 	mov ax, 4c00h
@@ -883,6 +892,7 @@ __loop:
 		
 		.NewLine
 		
+		.getch
 		; step
 		add bp, 02
 		
@@ -986,6 +996,8 @@ __loop:
 		call PrintString
 				
 		.NewLine
+		
+		.getch
 		
 		; step
 		add bp, 02
@@ -1100,58 +1112,13 @@ __loop:
 		
 		.NewLine
 		
+		.getch
+		
 		; step
 		add bp, 02
 		
-		cmp bp, 02d * StrCpyTestCount
+		cmp bp, 02d * StrCmpTestCount
 		jb __loop
-		
-		ret
-		
-		mov si, offset Str1
-		mov di, offset Str2
-		
-		call StrCmp ; 2
-		
-		mov di, offset Str1
-		mov si, offset Str2
-		
-		call StrCmp ; 1
-		
-		mov si, offset StrCmp1
-		mov di, offset StrCmp2
-		
-		call StrCmp ; 2
-		
-		mov si, offset StrCmp1
-		mov di, offset StrCmp3
-		
-		call StrCmp ; 2
-		
-		mov si, offset Str6
-		mov di, offset StrCmp4
-		
-		call StrCmp ; 1
-		
-		mov si, offset Str3
-		mov di, offset Str3
-		
-		call StrCmp ; 0
-		
-		mov si, offset Str2
-		mov di, offset Str2
-		
-		call StrCmp ; 0
-		
-		mov si, offset Str1
-		mov di, offset Str5
-		
-		call StrCmp ; 2
-		
-		mov si, offset Str5
-		mov di, offset Str1
-		
-		call StrCmp ; 1
 		
 		ret
 StrCmpUnitTests endp
@@ -1164,14 +1131,31 @@ StrCmpUnitTests endp
 AtoiUnitTests proc
 		
 		mov bp, 00h
-		jmp __body
 		
+		.TestStart
+		.NewLine
 __loop:
-		add bp, 02h
-__body:
+		.TestInput
+		; print input string
 		mov si, word ptr [offset StrNums + bp]
+		call PrintString
+		
+		.NewLine
 		
 		call Atoi
+		
+		; convert result to string
+		mov si, offset Array
+		call ItoaDec
+		; print number
+		call PrintString
+		
+		.NewLine
+		
+		.getch
+		
+		; step		
+		add bp, 02h
 
 		cmp bp, StrNumsCount * 02h
 		jb __loop
@@ -1189,48 +1173,91 @@ AtoiUnitTests endp
 ;--------------------------------------------------------------------
 ItoaUnitTests proc
 		
-		mov si, offset Array
+		mov bp, 00h
 		
-		mov ax, 65535d
-		call Itoa
-				
-		mov ax, 0d
-		call Itoa
-				
-		mov ax, 1d
-		call Itoa
+		.TestStart
+		.NewLine
 		
-		mov ax, 123d
-		call Itoa
+__loop:
+		call _ItoaUnitTests_Input
 		
-		mov ax, 653d
-		call Itoa
+		call _ItoaUnitTests_Func
 		
-		mov ax, 0804d
-		call Itoa
+		.getch
 		
-		mov ax, 1000d
-		call Itoa
-		
-		mov ax, 736d
-		call Itoa
-		
-		mov ax, 1353d
-		call Itoa
-		
-		mov ax, 60000d
-		call Itoa
+		; step		
+		add bp, 02h
+
+		cmp bp, StrNumsCount * 02h
+		jb __loop
 						
 		ret
 ItoaUnitTests endp
 
-Itoa proc
-		nop
-		nop
-		nop
+;--------------------------------------------------------------------
+; Part of ItoaUnitTests function. Do not use this.
+;--------------------------------------------------------------------
+_ItoaUnitTests_Input proc
+		.NewLine
+		.TestInput
+		.NewLine
+		
+		; print input strings
+		mov si, word ptr [StrNums + bp]
+		call PrintString
+		
+		.NewLine
+		
+		mov si, word ptr [BinStrNums + bp]
+		call PrintString
+		
+		mov si, word ptr [OctStrNums + bp]
+		call PrintString
+		
+		mov si, word ptr [HexStrNums + bp]
+		call PrintString
+		
+		.NewLine
 		
 		ret
-Itoa endp
+_ItoaUnitTests_Input endp
+
+;--------------------------------------------------------------------
+; Part of ItoaUnitTests function. Do not use this.
+;--------------------------------------------------------------------
+_ItoaUnitTests_Func proc
+		
+		.TestResult
+		.NewLine
+		
+		mov si, offset Array
+		
+		mov ax, word ptr [DecNums + bp]
+		call ItoaDec
+		
+		call PrintString
+		.NewLine
+		
+		mov ax, word ptr [DecNums + bp]
+		call ItoaBin
+		
+		call PrintString
+		.NewLine
+		
+		mov ax, word ptr [DecNums + bp]
+		call ItoaOct
+		
+		call PrintString
+		.NewLine
+		
+		mov ax, word ptr [DecNums + bp]
+		call ItoaHex
+		
+		call PrintString
+		.NewLine
+		
+		ret
+_ItoaUnitTests_Func endp
 
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
@@ -1247,6 +1274,8 @@ Itoa endp
 		
 HexConvert	db '0123456789ABCDEF'
 		
+StrCount	= 06h
+
 StrPtrs		dw Str1
 			dw Str2
 			dw Str3
@@ -1363,18 +1392,37 @@ StrCmpRes	db '2', 00h
 			db '0', 00h
 			db '2', 00h
 			db '1', 00h
-
-StrCount	= 06h
 				
+StrNumsCount = 06h
+
 StrNums		dw StrNum1
 			dw StrNum2
 			dw StrNum3
 			dw StrNum4
 			dw StrNum5
 			dw StrNum6
-			dw StrNumA
+			
+BinStrNums	dw BinStrNum1
+			dw BinStrNum2
+			dw BinStrNum3
+			dw BinStrNum4
+			dw BinStrNum5
+			dw BinStrNum6
+			
+OctStrNums	dw OctStrNum1
+			dw OctStrNum2
+			dw OctStrNum3
+			dw OctStrNum4
+			dw OctStrNum5
+			dw OctStrNum6
+			
+HexStrNums	dw HexStrNum1
+			dw HexStrNum2
+			dw HexStrNum3
+			dw HexStrNum4
+			dw HexStrNum5
+			dw HexStrNum6
 
-StrNumsCount = 07h
 MaxNumLen	 = 06h
 
 StrTestDescr: 	
@@ -1383,6 +1431,7 @@ StrTestSeparator:
 			db " / ", 00h
 
 StrInput	db "Input: ", 00h
+StrResult	db "Result: ", 00h
 			
 Str1		db "1234567890", 00h
 Str2		db "q", 00h
@@ -1396,18 +1445,46 @@ StrCmp2		db "12345a7890", 00h
 StrCmp3		db "1234567890a", 00h
 StrCmp4		db "asd qwe", 00h
 		
-StrNum1		db "1234", 00h
+DecNums		dw 1234d
+			dw 65535d
+			dw 0d
+			dw 123d
+			dw 10000d
+			dw 10010d
+		
+StrNum1		db "1234" , 00h
 StrNum2		db "65535", 00h
-StrNum3		db "0", 00h
-StrNum4		db "0123", 00h
+StrNum3		db "0"    , 00h
+StrNum4		db "0123" , 00h
 StrNum5		db "10000", 00h
 StrNum6		db "10010", 00h
-StrNumA		db "12a54", 00h
-		
+
+; 0Ah == '\n'
+BinStrNum1	db "bin: 0000 0100 1101 0010", 0Ah, 00h
+BinStrNum2	db "bin: 1111 1111 1111 1111", 0Ah, 00h
+BinStrNum3	db "bin: 0000 0000 0000 0000", 0Ah, 00h
+BinStrNum4	db "bin: 0000 0000 0111 1011", 0Ah, 00h
+BinStrNum5	db "bin: 0010 0111 0001 0000", 0Ah, 00h
+BinStrNum6	db "bin: 0010 0111 0001 1010", 0Ah, 00h
+					 
+OctStrNum1	db "oct: 2322"  , 0Ah, 00h
+OctStrNum2	db "oct: 177777", 0Ah, 00h
+OctStrNum3	db "oct: 0"     , 0Ah, 00h
+OctStrNum4	db "oct: 173"   , 0Ah, 00h
+OctStrNum5	db "oct: 23420" , 0Ah, 00h
+OctStrNum6	db "oct: 23432" , 0Ah, 00h
+					 
+HexStrNum1	db "hex: 04 D2", 0Ah, 00h
+HexStrNum2	db "hex: FF FF", 0Ah, 00h
+HexStrNum3	db "hex: 00 00", 0Ah, 00h
+HexStrNum4	db "hex: 00 7B", 0Ah, 00h
+HexStrNum5	db "hex: 27 10", 0Ah, 00h
+HexStrNum6	db "hex: 27 1A", 0Ah, 00h
+
 StrLenRes1	db "10", 00h
-StrLenRes2	db "1", 00h
-StrLenRes3	db "0", 00h
-StrLenRes4	db "2", 00h
+StrLenRes2	db "1",  00h
+StrLenRes3	db "0",  00h
+StrLenRes4	db "2",  00h
 StrLenRes5	db "40", 00h
 StrLenRes6	db "29", 00h
 		
