@@ -186,6 +186,7 @@ Override_KeyboardInterrupt endp
 ; Destr: null
 ;--------------------------------------------------------------------
 Override_TimerInterrupt proc
+
 		; Run old int handler
 		pushf ; Simulate interrupt
 		call dword ptr cs:[Old_Int08]
@@ -197,28 +198,8 @@ Override_TimerInterrupt proc
 		iret
 		
 __enable_frame:
-		push bp
-		mov bp, sp
 		
-		; push ax bx cx dx si di
-		
-		; push [bp]		  ; bp
-		; push bp		  ; sp
-		; push [bp + 02h] ; ip
-		; push ds
-		; push es
-		; push ss
-		; push [bp + 04h] ; cs
-		
-		push word ptr [bp + 04h] ; cs
-		push ss			; ss
-		push es			; es
-		push ds			; ds
-		push word ptr [bp + 02h] ; ip
-		push bp			; sp
-		push word ptr [bp]		; bp
-		
-		push di si dx cx bx ax
+		push es si di dx cx bx ax
 		
 		call SaveDeltas
 		
@@ -236,13 +217,8 @@ __break:
 		mov si, offset FrameVideoSeg
 		call DrawVideoSeg
 		
-		pop ax bx cx dx si di
+		pop ax bx cx dx di si es
 		
-		add sp, 02d * 04d; bp sp ip ds
-		pop es		; es
-		add sp, 02d * 02d; ss cs
-		
-		pop bp
 		iret
 Override_TimerInterrupt endp
 
