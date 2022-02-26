@@ -6,6 +6,19 @@ locals __
 org 100h
 
 ;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+.NewLine macro
+		nop
+		; putc('\n');
+		mov ah, 02h
+		mov dl, 0Ah ; '\n'
+		int 21h
+		nop
+		endm
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+
+;--------------------------------------------------------------------
 ; Main
 ;--------------------------------------------------------------------
 start:
@@ -810,18 +823,47 @@ Cdecl_ItoaBin			endp
 ;--------------------------------------------------------------------
 StrLenUnitTests	proc
 		
-		mov cx, 00h
 		mov bp, 00h
 		
+		; puts tests description
+		mov si, offset StrTestDescr
+		call PrintString
+		.NewLine
+		
 __loop:
+		; puts ("Input");
+		mov si, offset StrInput
+		call PrintString
+		
 		mov si, word ptr [offset StrPtrs + bp]
+		call PrintString ; puts input str
+		.NewLine
 		
 		call StrLen
 		
-		inc cx
-		add bp, 02h
+		; convert result to string
+		mov ax, bx
+		mov si, offset Array
+		call ItoaDec
+		; puts result
+		call PrintString
 		
-		cmp cx, StrCount
+		; puts right answer
+		mov si, offset StrTestSeparator
+		call PrintString
+		
+		mov si, word ptr [offset StrLenPtrs + bp]
+		call PrintString
+		
+		; putc('\n');
+		mov ah, 02h
+		mov dl, 0Ah ; '\n'
+		int 21h
+		
+		; step
+		add bp, 02
+		
+		cmp bp, 02d * StrCount
 		jb __loop
 		
 		ret
@@ -1111,7 +1153,7 @@ StrLenPtrs  dw StrLenRes1
 			dw StrLenRes5
 			dw StrLenRes6
 
-StrCount	= 05h
+StrCount	= 06h
 		
 StrNums		dw StrNum1
 			dw StrNum2
@@ -1126,6 +1168,8 @@ MaxNumLen	 = 06h
 
 StrTestDescr db "UnitTests: function_result / right_answer", 00h
 StrTestSeparator db " / ", 00h
+
+StrInput	db "Input: ", 00h
 	
 Str1		db "1234567890", 00h
 Str2		db "q", 00h
