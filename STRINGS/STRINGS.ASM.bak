@@ -203,7 +203,7 @@ __loop:
 		
 		inc bx
 __exit:
-		mov byte ptr [si + bx], 00h
+		mov byte ptr [di + bx], 00h
 		
 		ret
 StrNCpy endp

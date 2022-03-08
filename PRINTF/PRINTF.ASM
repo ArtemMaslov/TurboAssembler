@@ -1,0 +1,458 @@
+.model tiny
+.code
+.386
+
+org 100h
+
+locals __
+
+Start:
+		
+		call PrintFTestItoa
+		
+		; exit (0);
+		mov ax, 4c00h
+		int 21h
+		
+;-------------------------------------------------------------------------
+; Prints formated string to screen
+; 
+; Entry: cdecl
+;		 1 arg - formated string address
+;		 next args - formated string arguments 
+; 
+; Destr:
+;
+;-------------------------------------------------------------------------
+PrintF proc
+		push bp
+		mov bp, sp
+
+		mov si, word ptr [bp + 04d] ; string address
+		add bp, 06d
+		
+		cmp byte ptr [si], 00h ; is null-terminator
+		jne __printLoop
+		
+		jmp __exit
+		
+__printLoop:
+		
+		mov cl, byte ptr [si] ; current char
+		
+		cmp cl, '%'
+		jne __printSymbol
+		
+__parsePercent:
+		
+		inc si
+		
+		cmp byte ptr [si], 00h ; is null-terminator
+		je __exit
+		
+		cmp byte ptr [si], 'c' ; is %c?
+		je __formatChar
+		
+		cmp byte ptr [si], 's' ; is %s?
+		je __formatString
+		
+		cmp byte ptr [si], 'd' ; is %d?
+		je __formatDecimal
+		
+		cmp byte ptr [si], 'x' ; is %x?
+		je __formatHexadecimal
+		
+		cmp byte ptr [si], 'o' ; is %o?
+		je __formatOctal
+		
+		cmp byte ptr [si], 'b' ; is %b?
+		je __formatBinary
+		
+		cmp byte ptr [si], '%' ; is %%?
+		je __printSymbol
+		
+		jmp __exit
+		
+__formatChar:
+
+		mov ah, 02h
+		mov dl, byte ptr [bp]
+		int 21h
+		
+		add bp, 02d
+		
+		jmp __step
+		; ! format char
+		
+__formatString:
+
+		mov di, word ptr [bp]
+		add bp, 02d
+		
+		call PrintString
+		
+		jmp __step
+		; ! format string
+		
+__formatDecimal:
+
+		mov di, offset ItoaArray
+		mov ax, word ptr [bp]
+		add bp, 02h
+		
+		call ItoaDec
+		
+		call PrintString
+		
+		jmp __step
+		; ! format decimal
+		
+__formatHexadecimal:
+
+		mov di, offset ItoaArray
+		mov ax, word ptr [bp]
+		add bp, 02h
+		
+		call ItoaHex
+		
+		call PrintString
+		
+		jmp __step
+		; ! format hexadecimal
+		
+__formatOctal:
+
+		mov di, offset ItoaArray
+		mov ax, word ptr [bp]
+		add bp, 02h
+		
+		call ItoaOct
+		
+		call PrintString
+		
+		jmp __step
+		; ! format octal
+		
+__formatBinary:
+
+		mov di, offset ItoaArray
+		mov ax, word ptr [bp]
+		add bp, 02h
+		
+		call ItoaBin
+		
+		call PrintString
+		
+		jmp __step
+		; ! format binary
+				
+__printSymbol:
+		; putc();
+		mov ah, 02h
+		mov dl, byte ptr [si]
+		int 21h
+		; ! print Symbol
+		
+__step:
+		inc si
+		
+		; condition
+		cmp byte ptr [si], 00h ; is null-terminator
+		jne __printLoop
+		
+__exit:
+		pop bp
+		ret
+Printf endp
+
+;--------------------------------------------------------------------
+; Prints string to screen
+;
+; Entry:
+;		 di - source string
+;
+; Destr: ah, dl, di
+;--------------------------------------------------------------------
+PrintString proc
+		
+		cmp byte ptr [di], 00h
+		je __exit
+		
+		mov dl, byte ptr [di]
+		
+__loop:
+		mov ah, 02h ; putc(dl);
+		int 21h
+		
+		inc di
+		mov dl, byte ptr [di]
+		
+		cmp dl, 00h ; while (dl != '\0') putc(dl);
+		jne __loop
+		
+__exit:
+		ret
+PrintString endp
+
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+; Itoa functions area
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+;--------------------------------------------------------------------
+
+;--------------------------------------------------------------------
+; Convert decimal number to alpha
+;
+; Entry:
+;		 ax - source number
+;		 di - string destination
+;
+; Destr: ax, bx, cx, dx
+;--------------------------------------------------------------------
+ItoaDec proc
+		
+		push ax
+		mov bx, 00h
+		mov cx, 10d
+		
+		jmp __num_len
+		
+__step1:
+		inc bx
+		
+__num_len:
+		mov dx, 00h
+		div cx
+		
+		cmp ax, 00h
+		ja __step1
+		
+		pop ax
+		mov byte ptr [di + bx + 01], 00h ; null-terminator
+		
+__loop:
+		mov dx, 00h
+		div cx
+		
+		add dl, '0'
+		mov byte ptr [di + bx], dl
+		
+		dec bx
+		
+		cmp ax, 00h
+		ja __loop
+		
+		ret
+ItoaDec endp
+
+;--------------------------------------------------------------------
+; Convert hexidecimal number to alpha
+;
+; Entry:
+;		 ax - source number
+;		 di - string destination
+;
+; Destr: ax, bx, cl
+;--------------------------------------------------------------------
+ItoaHex proc
+		push bp
+		mov bp, 05h ; number length
+		
+		mov byte ptr [di + bp + 01], 00h ; null-terminator
+		
+__loop:
+		mov bx, ax
+		and bx, 000Fh ; bit mask = 0b1111
+		
+		mov cl, byte ptr [offset HexConvert + bx]
+		mov byte ptr [di + bp], cl
+		
+		; step
+		dec bp
+		shr ax, 04h ; div 16
+		
+		cmp bp, 01h
+		ja __loop
+		
+		mov word ptr [di + bp - 01h], 'x0'
+		
+		pop bp
+		ret
+ItoaHex endp
+
+;--------------------------------------------------------------------
+; Convert octal number to alpha
+;
+; Entry:
+;		 ax - source number
+;		 di - string destination
+;
+; Destr: ax, bx, dl, cx
+;--------------------------------------------------------------------
+ItoaOct proc
+		mov bx, 08h ; number length
+		
+		mov byte ptr [di + bx + 01], 00h ; null-terminator
+__loop:
+		mov dl, al
+		and dl, 07h ; bit mask
+		
+		add dl, '0'
+		
+		mov byte ptr [di + bx], dl
+		
+		; step
+		dec bx
+		shr ax, 03h ; div 8
+		
+		cmp bx, 01h
+		ja __loop
+		
+		mov word ptr [di + bx - 01h], 'q0'
+		
+		ret
+ItoaOct endp
+
+;--------------------------------------------------------------------
+; Convert binary number to alpha
+;
+; Entry:
+;		 ax - source number
+;		 di - string destination
+;
+; Destr: ax, bx, cx, dx
+;--------------------------------------------------------------------
+ItoaBin proc
+		mov bx, 00h
+		mov cx, 8000h ; 0b10...0 (count ('0') == 15)
+		
+		mov word ptr [di + bx], 'b0'
+		
+		add bx, 02h
+		
+__loop:
+		mov dx, ax
+		and dx, cx
+		
+		cmp dx, 00h
+		je __putc0
+		
+		mov byte ptr [di + bx], '1'
+		jmp __step
+__putc0:
+		mov byte ptr [di + bx], '0'
+		
+__step: ; step
+		inc bx
+		shr cx, 01h ; div 2
+		
+		cmp cx, 00h
+		ja __loop
+		
+		mov byte ptr [di + bx], 00h ; null-terminator
+		
+		ret
+ItoaBin endp
+	
+	
+;-------------------------------------------------------------------------
+;-------------------------------------------------------------------------
+; Data area
+;-------------------------------------------------------------------------
+;-------------------------------------------------------------------------
+
+PrintFStr1		db "Hello printf!", 00h
+
+PrintFStr2		db "C%car f%c%cmat symbol", 00h
+
+PrintFStr3		db "Char %s %s%s", 00h
+
+PrintFStr4		db "This is %d%% test. Hex = %%%x, oct = %o, bin = %b", 00h
+
+PrintFArgs2		db 'hor'
+
+PrintFArgs3_1	db "super", 00h
+PrintFArgs3_2	db "format", 00h
+PrintFArgs3_3	db " string!", 00h
+
+PrintFArgs4_1	dw 104d
+PrintFArgs4_2	dw 0DEADh
+PrintFArgs4_3	dw 1CA8h ; 16 250
+PrintFArgs4_4	dw 4CB3h ; 100 1100 1011 0011
+
+HexConvert		db '0123456789ABCDEF'
+
+ItoaArray		db 32 dup (0)
+
+;-------------------------------------------------------------------------
+;-------------------------------------------------------------------------
+; PrintF tests area
+;-------------------------------------------------------------------------
+;-------------------------------------------------------------------------
+
+PrintFTestPlainText proc
+		
+		push offset PrintFStr1
+		
+		call PrintF
+		
+		add sp, 02d
+		
+		ret
+PrintFTestPlainText endp
+
+PrintFTestChar proc
+		
+		mov bx, 03d
+		mov cx, 00h
+__loop:
+		mov cl, byte ptr [PrintFArgs2 + bx - 1]
+		push cx
+		
+		dec bx
+		ja __loop
+		
+		push offset PrintFStr2
+		
+		call PrintF
+		
+		add sp, 02d + 02d * 03d
+		
+		ret
+PrintFTestChar endp
+
+PrintFTestString proc
+		
+		push offset PrintFArgs3_3
+		push offset PrintFArgs3_2
+		push offset PrintFArgs3_1
+		push offset PrintFStr3
+		
+		call PrintF
+		
+		add sp, 02d * 04d
+		
+		ret
+PrintFTestString endp
+
+PrintFTestItoa proc
+		
+		push PrintFArgs4_4
+		push PrintFArgs4_3
+		push PrintFArgs4_2
+		push PrintFArgs4_1
+		push offset PrintFStr4
+		
+		call PrintF
+		
+		add sp, 02d * 05d
+		
+		ret
+PrintFTestItoa endp
+
+;-------------------------------------------------------------------------
+;-------------------------------------------------------------------------
+	
+end Start
