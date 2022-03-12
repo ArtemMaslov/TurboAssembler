@@ -1,6 +1,5 @@
 .model tiny
 .code
-.386
 
 locals __
 
