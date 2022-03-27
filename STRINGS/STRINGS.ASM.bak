@@ -1,6 +1,5 @@
 .model tiny
 .code
-.386
 
 locals __
 
@@ -69,13 +68,13 @@ org 100h
 ;--------------------------------------------------------------------
 ; Main
 ;--------------------------------------------------------------------
-start:
-	
-	call GeneralUnitTest
-	
-	; exit (0);
-	mov ax, 4c00h
-	int 21h
+;start:
+;	
+;	call GeneralUnitTest
+;	
+;	; exit (0);
+;	mov ax, 4c00h
+;	int 21h
 		
 ;--------------------------------------------------------------------
 ; Measure string length. String must be '\0'-terminated
@@ -1573,4 +1572,4 @@ HorSep		db "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", 0Ah, 00h
 Array:		db 256d dup(0FFh)
 
 
-end start
+;end start

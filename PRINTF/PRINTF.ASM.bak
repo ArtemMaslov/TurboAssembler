@@ -6,6 +6,8 @@ org 100h
 
 locals __
 
+PUBLIC PrintF
+
 Start:
 		call PrintFTestItoa
 		

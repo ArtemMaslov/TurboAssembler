@@ -40,3 +40,5 @@
 *.lst
 *.map
 *.MAP
+crack/*
+!crack/crack.com
